@@ -16,14 +16,11 @@ namespace global{
 
    int DT;
 
-   int Lx;
-   int Ly;
+   int L;
 
    int d;
 
-   PEPS<double> peps;
-
-   vector<Walker> backup_walker;
+   MPS<double> mps;
 
    int omp_num_threads;
 
@@ -32,13 +29,11 @@ namespace global{
    /**
     * @param DT_in virtual dimension of the trial
     * @param d_in physical dimension
-    * @param Lx_in x dimension of the square lattice
-    * @param Ly_in y dimension of the square lattice
+    * @param L_in dimension of the lattice
     */
-   void init(int DT_in,int d_in,int Lx_in,int Ly_in){
+   void init(int DT_in,int d_in,int L_in){
 
-      Lx = Lx_in;
-      Ly = Ly_in;
+      L = L_in;
 
       d = d_in;
 
@@ -50,14 +45,12 @@ namespace global{
       omp_num_threads = 1;
 #endif
 
+      mps.resize(L);
+      
       char filename[200];
-      sprintf(filename,"/home/bright/bestanden/results/peps/output/%dx%d/D=%d",Lx,Ly,DT);
+      sprintf(filename,"/home/bright/bestanden/results/mps-mc/trial/Heis_1D/L=%d/DT=%d.mps",L,DT);
 
-      peps.resize(Lx*Ly);
-      peps.load(filename);
-      peps.sD(DT_in);
-
-      backup_walker.resize(omp_num_threads);
+      mps.load(filename);
 
    }
 
@@ -74,14 +67,6 @@ namespace global{
       double rgen(){ 
 
          return 2.0*RN() - 1.0;
-
-      }
-
-   //!function which generates uniform random numbers between [0:1]
-   template<>
-      double rgen_pos(){ 
-
-         return RN();
 
       }
 

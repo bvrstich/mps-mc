@@ -12,11 +12,12 @@ using namespace btas;
 
 /**
  * @author Brecht Verstichel
- * @date 12-06-2014\n\n
+ * @date 26-03-2014\n\n
  * This class MPS is a class written for the construction of matrix product states without symmetry.
- * More specifically it will be used for the contraction of PEPS networks. Where the reduction to a MPS-like form is done.
+ * More specifically it will be used for the contraction of PEPS networks. Where the reduction to a MPS-like for is done.
  */
-class MPS : public vector< TArray<double,3> > {
+template<typename T>
+class MPS : public vector< TArray<T,3> > {
 
    public:
 
@@ -32,23 +33,9 @@ class MPS : public vector< TArray<double,3> > {
 
       int gD() const;
 
-      void fill_Random();
+      void scal(T );
 
-      void normalize();
-
-      void canonicalize(const BTAS_SIDE &,bool);
-
-      void cut_edges();
-
-      void guess(const BTAS_SIDE &,int ,const MPS &mps);
-
-      void compress(int ,const MPS &mps,int);
-
-      double dot(const MPS &bra) const;
-
-      void fill(char,const SL_PEPS &);
-
-      void gemv(char,char,int,const SL_PEPS &);
+      void load(const char *);
 
    private:
 
@@ -56,6 +43,25 @@ class MPS : public vector< TArray<double,3> > {
       int D;
 
 };
+
+/**
+ * output stream operator overloaded for MPS<T> 
+ */
+template<typename T>
+ostream &operator<<(ostream &output,const MPS<T> &mps_p){
+
+   for(int s = 0;s < mps_p.size();++s){
+
+         output << std::endl;
+         output << "Tensor on site (" << s << ")\t" << std::endl;
+         output << std::endl;
+         output << mps_p[s] << std::endl;
+
+      }
+
+   return output;
+
+}
 
 #endif
 

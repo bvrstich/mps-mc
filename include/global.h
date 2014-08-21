@@ -10,20 +10,16 @@ using std::ostream;
 using std::vector;
 using std::complex;
 
-using namespace btas;
+#include "MPS.h"
 
-#include "Walker.h"
-#include "PEPS.h"
+using namespace btas;
 
 namespace global {
 
    extern Random RN;
 
-   //!x dimension of the lattice, nr of cols
-   extern int Lx;
-
-   //!y dimension of the lattice, nr of rows
-   extern int Ly;
+   //!x dimension of the lattice
+   extern int L;
 
    //!physical dimension of sites
    extern int d;
@@ -31,23 +27,17 @@ namespace global {
    //!virtual dimension of the trial
    extern int DT;
 
-   //!backup walker state for stability in GFQMC algorithm
-   extern vector<Walker> backup_walker;
-
    //!number of omp threads
    extern int omp_num_threads;
 
    //!trial wavefunction
-   extern PEPS<double> peps;
+   extern MPS<double> mps;
 
-   void init(int,int,int,int);
+   void init(int,int,int);
 
    template<typename T>
       T rgen();
 
-   template<typename T>
-      T rgen_pos();
-   
 };
 
 #endif
