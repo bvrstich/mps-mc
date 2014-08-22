@@ -14,7 +14,6 @@ using namespace btas;
  * @author Brecht Verstichel
  * @date 26-03-2014\n\n
  * This class MPS is a class written for the construction of matrix product states without symmetry.
- * More specifically it will be used for the contraction of PEPS networks. Where the reduction to a MPS-like for is done.
  */
 template<typename T>
 class MPS : public vector< TArray<T,3> > {

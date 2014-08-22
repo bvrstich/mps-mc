@@ -17,23 +17,23 @@ using namespace global;
 
 /**
  * construct a Walker object: initialize on AF state
+ * @param option decides wich AF state, start with up or down: standard == 0
  * @param n_trot_in number of trotter terms
  */
-Walker::Walker() : std::vector< bool >( Lx * Ly ){
+Walker::Walker(int option) : std::vector< bool >( L ){
 
    weight = 1.0;
 
    sign = 1;
 
-   for(int r = 0;r < Ly;++r)
-      for(int c = 0;c < Lx;++c){
+   for(int site = 0;site < L;++site){
 
-         if( (r + c)%2 == 0)
-            (*this)[ r*Lx + c ] = true;
-         else
-            (*this)[ r*Lx + c ] = false;
+      if( (site + option) % 2 == 0)
+         (*this)[site] = true;
+      else
+         (*this)[site] = false;
 
-      }
+   }
 
 }
 
@@ -131,14 +131,8 @@ double Walker::gEL() const{
 
 ostream &operator<<(ostream &output,const Walker &walker_p){
 
-   for(int r = 0;r < Ly;++r){
-
-      for(int c = 0;c < Lx;++c)
-         output << walker_p[r*Lx + c] << " ";
-
-      output << endl;
-
-   }
+   for(int site = 0;site < L;++site)
+      output << walker_p[site];
 
    return output;
 
@@ -160,33 +154,13 @@ double Walker::pot_en() const {
 
    double tmp = 0.0;
 
-   //first horizontal
-   for(int r = 0;r < Ly;++r){
+   for(int site = 0;site < L - 1;++site){
 
-      for(int c = 0;c < Lx - 1;++c){
-
-         //Sz Sz
-         if( (*this)[r*Lx + c] == (*this)[r*Lx + (c + 1)] )//up up or down down
-            tmp += 0.25;
-         else //up down or down up
-            tmp -= 0.25;
-
-      }
-
-   }
-
-   //then vertical
-   for(int c = 0;c < Lx;++c){
-
-      for(int r = 0;r < Ly - 1;++r){
-
-         //Sz Sz
-         if( (*this)[r*Lx + c] == (*this)[(r + 1)*Lx + c] )//up up or down down
-            tmp += 0.25;
-         else //up down or down up
-            tmp -= 0.25;
-
-      }
+      //Sz Sz
+      if( (*this)[site] == (*this)[site + 1] )//up up or down down
+         tmp += 0.25;
+      else //up down or down up
+         tmp -= 0.25;
 
    }
 
@@ -196,9 +170,9 @@ double Walker::pot_en() const {
 
 /**
  * calculate the local energy expectation value and overlap with the accesible states
- * @param peps trial wave function represented as peps
+ * @param mps trial wave function represented as a matrix product state
  */
-void Walker::calc_EL(const PEPS< double > &peps){
+void Walker::calc_EL(const MPS< double > &mps){
 
 #ifdef _OPENMP
    int myID = omp_get_thread_num();
@@ -206,795 +180,103 @@ void Walker::calc_EL(const PEPS< double > &peps){
    int myID = 0;
 #endif
 
-   // ---- || evaluate the expectation values in an MPO/MPS manner, first from bottom to top, then left to right || ----
+   U[myID].fill(false,mps,*this);
+   I[myID].fill(true,mps,*this);
 
+   //construct right renormalized operator
+   vector< TArray<double,1> > R(L - 2);
+
+   int m,n;
    double ward;
-   double energy = 0.0;
 
-   int M,N,K;
+   //rightmost site
+   int dim = U[myID][L-1].shape(0);
 
-   nn_over.clear();
+   R[L-3].resize(dim);
 
-   //calculate the single layer contractions first:
-   Environment::U[myID].fill('H',false,peps,*this);
-   Environment::I[myID].fill('H',true,peps,*this);
+   blas::copy(dim, U[myID][L-1].data(), 1, R[L-3].data(), 1);
 
-   //first construct the top and bottom (horizontal) environment layers
-   Environment::calc_env('H',peps,*this);
+   for(int i = L - 2;i > 1;--i){
 
-   // #################################################################
-   // ### ---- from bottom to top: contract in mps/mpo fashion ---- ### 
-   // #################################################################
+      m = U[myID][i].shape(0);
+      n = U[myID][i].shape(1);
 
-   // -- (1) -- || bottom row: similar to overlap calculation
+      R[i-2].resize(m);
 
-   //first construct the right renormalized operators
-   vector< DArray<2> > R(Lx - 1);
-
-   //first the rightmost operator
-   DArray<4> tmp4;
-   DArray<3> tmp3;
-
-   //tmp comes out index (t,b)
-   Contract(1.0,Environment::t[myID][0][Lx - 1],shape(1),Environment::b[myID][0][Lx - 1],shape(1),0.0,tmp4);
-
-   //reshape tmp to a 2-index array
-   R[Lx - 2] = tmp4.reshape_clear(shape(Environment::t[myID][0][Lx - 1].shape(0),Environment::b[myID][0][Lx - 1].shape(0)));
-
-   //now construct the rest
-   for(int col = Lx - 2;col > 0;--col){
-
-      tmp3.clear();
-      Contract(1.0,Environment::t[myID][0][col],shape(2),R[col],shape(0),0.0,tmp3);
-
-      Contract(1.0,tmp3,shape(1,2),Environment::b[myID][0][col],shape(1,2),0.0,R[col-1]);
+      blas::gemv(CblasRowMajor, CblasNoTrans, m, n, 1.0, U[myID][i].data(), n, R[i - 1].data(), 1, 0.0, R[i - 2].data(), 1);
 
    }
 
-   //2 left going operators: S+/- and 1
-   DArray<2> LI;
-   DArray<2> LU;
+   //now the left going operators: regular and inverse
+   TArray<double,1> LU;
+   TArray<double,1> LI;
 
-   TArray<double,5> tmp5;
+   TArray<double,1> tmp;
 
-   //tmp comes out index (t,b)
-   Contract(1.0,Environment::t[myID][0][0],shape(1),Environment::U[myID](0,0),shape(1),0.0,tmp5);
+   LU.resize(dim);
+   LI.resize(dim);
 
-   LU = tmp5.reshape_clear( shape(Environment::t[myID][0][0].shape(2),Environment::U[myID](0,0).shape(3)) );
+   blas::copy(dim, U[myID][0].data(), 1, LU.data(), 1);
+   blas::copy(dim, I[myID][0].data(), 1, LI.data(), 1);
 
-   //calculate the overlap with this state
-   nn_over.push_back(Dot(R[0],LU));
+   //put the overlap here later!
+   nn_over.push_back(0);
 
-   //only calculate LI if it contributes
-   if( (*this)[0] != (*this)[1] ){
+   //now calculate the energy!
+   for(int i = 1;i < L - 1;++i){
 
-      //tmp comes out index (t,b)
-      Contract(1.0,Environment::t[myID][0][0],shape(1),Environment::I[myID](0,0),shape(1),0.0,tmp5);
+      //contribution to the energy
+      if( (*this)[i - 1] != (*this)[i]){
 
-      LI = tmp5.reshape_clear( shape(Environment::t[myID][0][0].shape(2),Environment::I[myID](0,0).shape(3)) );
+         m = I[myID][i].shape(0);
+         n = I[myID][i].shape(1);
 
-   }
+         tmp.resize(n);
 
-   //now for the middle terms
-   for(int col = 1;col < Lx - 1;++col){
+         blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, I[myID][i].data(), n, LI.data(), 1, 0.0, tmp.data(), 1);
 
-      //first close down the S+/- action:
-
-      //only calculate if it contributes
-      if( (*this)[col - 1] != (*this)[col] ){
-
-         //construct the right intermediate contraction (paste top to right)
-         tmp3.clear();
-         Contract(1.0,Environment::t[myID][0][col],shape(2),R[col],shape(0),0.0,tmp3);
-
-         // 1) paste I to the right
-         M = tmp3.shape(0);
-         N = Environment::I[myID](0,col).shape(0);
-         K = tmp3.shape(1) * tmp3.shape(2);
-
-         blas::gemm(CblasRowMajor, CblasNoTrans, CblasTrans, M, N, K, 1.0, tmp3.data(),K,Environment::I[myID](0,col).data(),K,0.0,R[col-1].data(),N);
-
-         ward = Dot(LI,R[col - 1]);
-         nn_over.push_back(ward);
-
-         //contract with left LI 
-         energy += 0.5 * ward;
+         nn_over.push_back(blas::dot(n, tmp.data(), 1, R[i-1].data(), 1));
 
       }
 
-      //construct left renormalized operators for next site: first paste top to Left unity
-      tmp3.clear();
-      Contract(1.0,LU,shape(0),Environment::t[myID][0][col],shape(0),0.0,tmp3);
+      //new left sides
 
-      M = tmp3.shape(0);
-      N = Environment::U[myID](0,col).shape(0);
-      K = tmp3.shape(1) * tmp3.shape(2);
+      //if it contributes make LI:
+      if( (*this)[i] != (*this)[i + 1]){
 
-      //1) construct new unity on the left
-      LU.resize(Environment::t[myID][0][col].shape(2),Environment::U[myID](0,col).shape(3));
-      blas::gemm(CblasRowMajor, CblasTrans, CblasNoTrans, M, N, K, 1.0, tmp3.data(),M,Environment::U[myID](0,col).data(),N,0.0,LU.data(),N);
+         m = I[myID][i].shape(0);
+         n = I[myID][i].shape(1);
 
-      //2) if it contributes, calculate inverse on the left
-      if((*this)[col] != (*this)[col + 1]){
+         LI.resize(n);
 
-         LI.resize(Environment::t[myID][0][col].shape(2),Environment::I[myID](0,col).shape(3));
-         blas::gemm(CblasRowMajor, CblasTrans, CblasNoTrans, M, N, K, 1.0, tmp3.data(),M,Environment::I[myID](0,col).data(),N,0.0,LI.data(),N);
+         blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, I[myID][i].data(), n, LU.data(), 1, 0.0, LI.data(), 1);
 
       }
 
-   }
+      //new left unity
+      m = U[myID][i].shape(0);
+      n = U[myID][i].shape(1);
 
-   //last site of bottom row: close down LI
-   if((*this)[Lx - 2] != (*this)[Lx - 1]){
+      tmp.resize(n);
+      blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, U[myID][i].data(), n, LU.data(), 1, 0.0, tmp.data(), 1);
 
-      Contract(1.0,Environment::t[myID][0][Lx-1],shape(1),Environment::I[myID](0,Lx-1),shape(1),0.0,tmp5);
-
-      R[Lx-2] = tmp5.reshape_clear(shape(Environment::t[myID][0][Lx-1].shape(0),Environment::I[myID](0,Lx-1).shape(0)));
-
-      ward = Dot(LI,R[Lx-2]);
-      nn_over.push_back(ward);
-
-      energy += 0.5 * ward;
+      LU.resize(n);
+      blas::copy(n, tmp.data(), 1, LU.data(), 1);
 
    }
 
-   // -- (2) -- now move from bottom to top calculating everything like an MPO/MPS expectation value
+   //final contribution to the energy
+   if( (*this)[L - 2] != (*this)[L - 1])
+      nn_over.push_back(blas::dot(LI.size(), LI.data(), 1, I[myID][L-1].data(), 1));
 
-   //Right renormalized operators
-   vector< TArray<double,3> > RO(Lx - 1);
+   //overlap
+   nn_over[0] = blas::dot(LU.size(), LU.data(), 1, U[myID][L-1].data(), 1);
 
-   //2 left renormalized operators needed
-   TArray<double,3> LOI;
-   TArray<double,3> LOU;
+   //calculate the local energy
+   EL = this->pot_en();
 
-   for(int row = 1;row < Ly - 1;++row){
-
-      //first create right renormalized operator
-
-      //paste top environment on
-      tmp5.clear();
-      Contract(1.0,Environment::t[myID][row][Lx - 1],shape(1),Environment::U[myID](row,Lx-1),shape(1),0.0,tmp5);
-
-      //then bottom enviroment
-      TArray<double,6> tmp6;
-      Contract(1.0,tmp5,shape(3),Environment::b[myID][row-1][Lx-1],shape(1),0.0,tmp6);
-
-      //move to a DArray<3> object
-      RO[Lx - 2] = tmp6.reshape_clear(shape(Environment::t[myID][row][Lx - 1].shape(0),Environment::U[myID](row,Lx-1).shape(0),Environment::b[myID][row-1][Lx - 1].shape(0)));
-
-      DArray<4> I4;
-      DArray<4> I4bis;
-
-      //now construct the middle operators
-      for(int col = Lx-2;col > 0;--col){
-
-         I4.clear();
-         Contract(1.0,Environment::t[myID][row][col],shape(2),RO[col],shape(0),0.0,I4);
-
-         enum {i,j,k,o,m,n};
-
-         I4bis.clear();
-         Contract(1.0,I4,shape(i,j,k,o),Environment::U[myID](row,col),shape(m,j,n,k),0.0,I4bis,shape(i,m,n,o));
-
-         RO[col-1].clear();
-         Contract(1.0,I4bis,shape(2,3),Environment::b[myID][row-1][col],shape(1,2),0.0,RO[col-1]);
-
-      }
-
-      // --- now move from left to right to get the expecation value of the interactions ---
-      // --- First construct the left going operators for the first site -----
-
-      // 1) construct left renormalized operator with unity
-
-      //paste top environment on local Sz
-      tmp5.clear();
-      Contract(1.0,Environment::t[myID][row][0],shape(1),Environment::U[myID](row,0),shape(1),0.0,tmp5);
-
-      //then bottom enviroment on that
-      tmp6.clear();
-      Contract(1.0,tmp5,shape(3),Environment::b[myID][row-1][0],shape(1),0.0,tmp6);
-
-      //move to a DArray<3> object: order (top-env,peps-row,bottom-env)
-      LOU = tmp6.reshape_clear(shape(Environment::t[myID][row][0].shape(2),Environment::U[myID](row,0).shape(3),Environment::b[myID][row-1][0].shape(2)));
-
-      // 2) construct left operator with inverted spin if it contributes
-      if((*this)[row*Lx] != (*this)[row*Lx + 1]){
-
-         //paste top environment on local inverted Sz
-         tmp5.clear();
-         Contract(1.0,Environment::t[myID][row][0],shape(1),Environment::I[myID](row,0),shape(1),0.0,tmp5);
-
-         //then bottom enviroment on that
-         tmp6.clear();
-         Contract(1.0,tmp5,shape(3),Environment::b[myID][row-1][0],shape(1),0.0,tmp6);
-
-         //move to a DArray<3> object: order (top-env,peps-row,bottom-env)
-         LOI = tmp6.reshape_clear(shape(Environment::t[myID][row][0].shape(2),Environment::I[myID](row,0).shape(3),Environment::b[myID][row-1][0].shape(2)));
-
-      }
-
-      // --- now for the middle sites, close down the operators on the left and construct new 1.0s --- 
-      for(int col = 1;col < Lx - 1;++col){
-
-         enum {i,j,k,o,m,n};
-
-         //1) close down LOI with I if it contributes
-         if((*this)[row*Lx + col - 1] != (*this)[row*Lx + col]){
-
-            //first add top to the right side, put it in I4
-            I4.clear();
-            Contract(1.0,Environment::t[myID][row][col],shape(2),RO[col],shape(0),0.0,I4);
-
-            I4bis.clear();
-            Contract(1.0,I4,shape(i,j,k,o),Environment::I[myID](row,col),shape(m,j,n,k),0.0,I4bis,shape(i,m,n,o));
-
-            Contract(1.0,I4bis,shape(2,3),Environment::b[myID][row-1][col],shape(1,2),0.0,RO[col-1]);
-
-            //expectation value:
-            ward = Dot(LOI,RO[col-1]);
-            nn_over.push_back(ward);
-
-            energy += 0.5 * ward;
-
-         }
-
-         // now construct the new left going renormalized operators
-
-         //first attach top to left unity
-         I4.clear();
-         Contract(1.0,Environment::t[myID][row][col],shape(0),LOU,shape(0),0.0,I4);
-
-         // 1) construct new left unity
-         Contract(1.0,I4,shape(i,j,k,o),Environment::U[myID](row,col),shape(k,i,m,n),0.0,I4bis,shape(j,n,o,m));
-
-         LOU.clear();
-         Contract(1.0,I4bis,shape(2,3),Environment::b[myID][row-1][col],shape(0,1),0.0,LOU);
-
-         // 2) if it contributes, construct new left inverted 
-         if((*this)[row*Lx + col] != (*this)[row*Lx + col + 1]){
-
-            Contract(1.0,I4,shape(i,j,k,o),Environment::I[myID](row,col),shape(k,i,m,n),0.0,I4bis,shape(j,n,o,m));
-
-            LOI.clear();
-            Contract(1.0,I4bis,shape(2,3),Environment::b[myID][row-1][col],shape(0,1),0.0,LOI);
-
-         }
-
-      }
-
-      //last site on the right: close down LOI if it contributes
-      if((*this)[row*Lx + Lx - 2] != (*this)[row*Lx + Lx - 1]){
-
-         //paste top environment on
-         tmp5.clear();
-         Contract(1.0,Environment::t[myID][row][Lx - 1],shape(1),Environment::I[myID](row,Lx-1),shape(1),0.0,tmp5);
-
-         //then bottom enviroment
-         Contract(1.0,tmp5,shape(3),Environment::b[myID][row-1][Lx-1],shape(1),0.0,tmp6);
-
-         //move to a DArray<3> object
-         RO[Lx - 2] = tmp6.reshape_clear(shape(Environment::t[myID][row][Lx - 1].shape(0),Environment::I[myID](row,Lx-1).shape(0),Environment::b[myID][row-1][Lx - 1].shape(0)));
-
-         //add to energy
-         ward = Dot(LOI,RO[Lx - 2]);
-         nn_over.push_back(ward);
-
-         energy += 0.5 * ward;
-
-      }
-
-   }
-
-   // -- (3) -- || top row = Ly-1: again similar to overlap calculation
-
-   //first construct the right renormalized operators
-
-   //tmp comes out index (t,b)
-   tmp4.clear();
-   Contract(1.0,Environment::t[myID][Ly-2][Lx - 1],shape(1),Environment::b[myID][Ly-2][Lx - 1],shape(1),0.0,tmp4);
-
-   //reshape tmp to a 2-index array
-   R[Lx - 2] = tmp4.reshape_clear(shape(Environment::t[myID][Ly-2][Lx - 1].shape(0),Environment::b[myID][Ly-2][Lx - 1].shape(0)));
-
-   //now construct the rest
-   for(int col = Lx - 2;col > 0;--col){
-
-      tmp3.clear();
-      Contract(1.0,Environment::t[myID][Ly-2][col],shape(2),R[col],shape(0),0.0,tmp3);
-
-      R[col - 1].clear();
-      Contract(1.0,tmp3,shape(1,2),Environment::b[myID][Ly-2][col],shape(1,2),0.0,R[col-1]);
-
-   }
-
-   //construct the left going operators on the first top site
-
-   //unity
-   tmp5.clear();
-   Contract(1.0,Environment::U[myID](Ly-1,0),shape(2),Environment::b[myID][Ly-2][0],shape(1),0.0,tmp5);
-
-   LU = tmp5.reshape_clear(shape(Environment::U[myID](Ly-1,0).shape(3),Environment::b[myID][Ly-2][0].shape(2)));
-
-   //inverse if it contributes
-   if( (*this)[(Ly - 1)*Lx] != (*this)[(Ly - 1)*Lx + 1]){
-
-      tmp5.clear();
-      Contract(1.0,Environment::I[myID](Ly-1,0),shape(2),Environment::b[myID][Ly-2][0],shape(1),0.0,tmp5);
-
-      LI = tmp5.reshape_clear(shape(Environment::I[myID](Ly-1,0).shape(3),Environment::b[myID][Ly-2][0].shape(2)));
-
-   }
-
-   //middle of the chain:
-   for(int col = 1;col < Lx-1;++col){
-
-      //first close down the I term from the previous site for the energy
-      if( (*this)[(Ly - 1)*Lx + col - 1] != (*this)[(Ly - 1)*Lx + col]){
-
-         //construct the right intermediate contraction (paste bottom to right)
-         tmp3.clear();
-         Contract(1.0,Environment::b[myID][Ly-2][col],shape(2),R[col],shape(1),0.0,tmp3);
-
-         // 1) paste Sx to the right
-         M = Environment::I[myID](Ly-1,col).shape(0);
-         N = tmp3.shape(0);
-         K = tmp3.shape(1) * tmp3.shape(2);
-
-         blas::gemm(CblasRowMajor, CblasNoTrans, CblasTrans, M, N, K, 1.0, Environment::I[myID](Ly-1,col).data(),K,tmp3.data(),K,0.0,R[col-1].data(),N);
-
-         //contract with left LI 
-         ward = Dot(LI,R[col - 1]);
-         nn_over.push_back(ward);
-
-         energy += 0.5 * ward;
-
-      }
-
-      //construct left renormalized operators for next site: first paste bottom to Left unity
-      tmp3.clear();
-      Contract(1.0,LU,shape(1),Environment::b[myID][Ly-2][col],shape(0),0.0,tmp3);
-
-      // 1) construct new left unity operator
-      LU.resize(Environment::U[myID](Ly-1,col).shape(3),Environment::b[myID][Ly-2][col].shape(2));
-
-      M = Environment::U[myID](Ly-1,col).shape(3);
-      N = tmp3.shape(2);
-      K = tmp3.shape(0) * tmp3.shape(1);
-
-      blas::gemm(CblasRowMajor, CblasTrans, CblasNoTrans, M, N, K, 1.0, Environment::U[myID](Ly-1,col).data(),M,tmp3.data(),N,0.0,LU.data(),N);
-
-      // 2) if it contributes, construct new left LI
-      if( (*this)[(Ly - 1)*Lx + col] != (*this)[(Ly - 1)*Lx + col + 1]){
-
-         LI.resize(Environment::I[myID](Ly-1,col).shape(3),Environment::b[myID][Ly-2][col].shape(2));
-         blas::gemm(CblasRowMajor, CblasTrans, CblasNoTrans, M, N, K, 1.0, Environment::I[myID](Ly-1,col).data(),M,tmp3.data(),N,0.0,LI.data(),N);
-
-      }
-
-   }
-
-   //finally close down on last top site
-
-   // close down last LI
-   if( (*this)[(Ly - 1)*Lx + Lx - 2] != (*this)[(Ly - 1)*Lx + Lx - 1]){
-
-      //tmp comes out index (t,b)
-      tmp5.clear();
-      Contract(1.0,Environment::I[myID](Ly-1,Lx-1),shape(2),Environment::b[myID][Ly-2][Lx - 1],shape(1),0.0,tmp5);
-
-      //reshape tmp to a 2-index array
-      R[Lx - 2] = tmp5.reshape_clear(shape(Environment::I[myID](Ly-1,Lx-1).shape(0),Environment::b[myID][Ly-2][Lx - 1].shape(0)));
-
-      //energy
-      ward =  Dot(LI,R[Lx-2]);
-      nn_over.push_back(ward);
-
-      energy += 0.5 * ward;
-
-   }
-
-   // #################################################################
-   // ### ----      Horizontal Sz contribution is easy         ---- ### 
-   // #################################################################
-
-   int cnt = 0;
-
-   for(int row = 0;row < Ly;++row){
-
-      for(int col = 0;col < Lx - 1;++col){
-
-         if( (*this)[row*Lx + col] != (*this)[row*Lx + col + 1] )
-            cnt -= 1;
-         else
-            cnt += 1;
-
-      }
-
-   }
-
-   energy += 0.25 * cnt * nn_over[0];
-
-   // #################################################################
-   // ### ---- from left to right: contract in mps/mpo fashion ---- ### 
-   // #################################################################
-
-   //calculate the single layer contractions first:
-   Environment::U[myID].fill('V',false,peps,*this);
-   Environment::I[myID].fill('V',true,peps,*this);
-
-   //first construct the top and bottom (horizontal) environment layers
-   Environment::calc_env('V',peps,*this);
-
-   // -- (1) -- || left column: similar to overlap calculation
-
-   //tmp comes out index (r,l)
-   Contract(1.0,Environment::r[myID][0][Ly - 1],shape(1),Environment::l[myID][0][Ly - 1],shape(1),0.0,tmp4);
-
-   //reshape tmp to a 2-index array
-   R[Ly - 2] = tmp4.reshape_clear(shape(Environment::r[myID][0][Ly - 1].shape(0),Environment::l[myID][0][Ly - 1].shape(0)));
-
-   //now construct the rest
-   for(int row = Ly - 2;row > 0;--row){
-
-      tmp3.clear();
-      Contract(1.0,Environment::r[myID][0][row],shape(2),R[row],shape(0),0.0,tmp3);
-
-      Contract(1.0,tmp3,shape(1,2),Environment::l[myID][0][row],shape(1,2),0.0,R[row-1]);
-
-   }
-
-   //left going operator:
-   tmp5.clear();
-
-   //unity
-   Contract(1.0,Environment::r[myID][0][0],shape(1),Environment::U[myID](0,0),shape(1),0.0,tmp5);
-
-   LU = tmp5.reshape_clear(shape(Environment::r[myID][0][0].shape(2),Environment::U[myID](0,0).shape(3)));
-
-   //inverse if it contributes:
-   if( (*this)[0] != (*this)[Lx]){
-
-      tmp5.clear();
-
-      Contract(1.0,Environment::r[myID][0][0],shape(1),Environment::I[myID](0,0),shape(1),0.0,tmp5);
-
-      LI = tmp5.reshape_clear(shape(Environment::r[myID][0][0].shape(2),Environment::I[myID](0,0).shape(3)));
-
-   }
-
-   //now for the middle terms
-   for(int row = 1;row < Ly - 1;++row){
-
-      if( (*this)[(row - 1)*Lx] != (*this)[row*Lx] ){
-
-         //first close down the LI from the previous site for the energy if necessary
-
-         //construct the right intermediate contraction (paste top to right)
-         tmp3.clear();
-         Contract(1.0,Environment::r[myID][0][row],shape(2),R[row],shape(0),0.0,tmp3);
-
-         // 1) paste Sx to the right
-         M = tmp3.shape(0);
-         N = Environment::I[myID](row,0).shape(0);
-         K = tmp3.shape(1) * tmp3.shape(2);
-
-         blas::gemm(CblasRowMajor, CblasNoTrans, CblasTrans, M, N, K, 1.0, tmp3.data(),K,Environment::I[myID](row,0).data(),K,0.0,R[row-1].data(),N);
-
-         //contract with left Sx
-         ward = Dot(LI,R[row - 1]);
-         nn_over.push_back(ward);
-
-         energy += 0.5 * ward;
-
-      }
-
-      //construct left renormalized operators for next site: first paste top to Left unity
-      tmp3.clear();
-      Contract(1.0,LU,shape(0),Environment::r[myID][0][row],shape(0),0.0,tmp3);
-
-      // 1) construct new unity on the left
-      M = tmp3.shape(0);
-      N = Environment::I[myID](row,0).shape(0);
-      K = tmp3.shape(1) * tmp3.shape(2);
-
-      LU.resize(Environment::r[myID][0][row].shape(2),Environment::U[myID](row,0).shape(3));
-      blas::gemm(CblasRowMajor, CblasTrans, CblasNoTrans, M, N, K, 1.0, tmp3.data(),M,Environment::U[myID](row,0).data(),N,0.0,LU.data(),N);
-
-      // 2) if contribution, construct new inverse on the left
-      if( (*this)[row*Lx] != (*this)[(row + 1)*Lx] ){
-
-         LI.resize(Environment::r[myID][0][row].shape(2),Environment::I[myID](row,0).shape(3));
-         blas::gemm(CblasRowMajor, CblasTrans, CblasNoTrans, M, N, K, 1.0, tmp3.data(),M,Environment::I[myID](row,0).data(),N,0.0,LI.data(),N);
-
-      }
-
-   }
-
-   //last site of left column: close down the left LI if necessary
-   if( (*this)[(Ly - 2)*Lx] != (*this)[(Ly - 1)*Lx] ){
-
-      Contract(1.0,Environment::r[myID][0][Ly-1],shape(1),Environment::I[myID](Ly-1,0),shape(1),0.0,tmp5);
-
-      R[Ly-2] = tmp5.reshape_clear(shape(Environment::r[myID][0][Ly-1].shape(0),Environment::I[myID](Ly-1,0).shape(0)));
-
-      ward = Dot(LI,R[Ly-2]);
-      nn_over.push_back(ward);
-
-      energy += 0.5 * ward;
-
-   }
-
-   // -- (2) -- now move from left to right calculating everything like an MPO/MPS expectation value
-
-   for(int col = 1;col < Lx - 1;++col){
-
-      //first create right renormalized operator
-
-      //paste right environment on
-      tmp5.clear();
-      Contract(1.0,Environment::r[myID][col][Ly - 1],shape(1),Environment::U[myID](Ly-1,col),shape(1),0.0,tmp5);
-
-      //then left enviroment
-      TArray<double,6> tmp6;
-      Contract(1.0,tmp5,shape(3),Environment::l[myID][col-1][Ly-1],shape(1),0.0,tmp6);
-
-      //move to a DArray<3> object
-      RO[Ly - 2] = tmp6.reshape_clear(shape(Environment::r[myID][col][Ly - 1].shape(0),Environment::U[myID](Ly-1,col).shape(0),Environment::l[myID][col-1][Ly - 1].shape(0)));
-
-      DArray<4> I4;
-      DArray<4> I4bis;
-
-      //now construct the middle operators
-      for(int row = Ly-2;row > 0;--row){
-
-         I4.clear();
-         Contract(1.0,Environment::r[myID][col][row],shape(2),RO[row],shape(0),0.0,I4);
-
-         enum {i,j,k,o,m,n};
-
-         I4bis.clear();
-         Contract(1.0,I4,shape(i,j,k,o),Environment::U[myID](row,col),shape(m,j,n,k),0.0,I4bis,shape(i,m,n,o));
-
-         RO[row-1].clear();
-         Contract(1.0,I4bis,shape(2,3),Environment::l[myID][col-1][row],shape(1,2),0.0,RO[row-1]);
-
-      }
-
-      // --- now move from left to right to get the expecation value of the interactions ---
-      // --- First construct the left going operators for the first site -----
-
-      // construct left renormalized operator with unity
-
-      //paste left environment on local Sz
-      tmp5.clear();
-      Contract(1.0,Environment::r[myID][col][0],shape(1),Environment::U[myID](0,col),shape(1),0.0,tmp5);
-
-      //then right environment on that
-      tmp6.clear();
-      Contract(1.0,tmp5,shape(3),Environment::l[myID][col-1][0],shape(1),0.0,tmp6);
-
-      //move to a DArray<3> object: order (left-env,peps-row,right-env)
-      LOU = tmp6.reshape_clear(shape(Environment::r[myID][col][0].shape(2),Environment::U[myID](0,col).shape(3),Environment::l[myID][col-1][0].shape(2)));
-
-      //construct left inverse if it contributes
-      if( (*this)[col] != (*this)[Lx + col]){
-
-         tmp5.clear();
-         Contract(1.0,Environment::r[myID][col][0],shape(1),Environment::I[myID](0,col),shape(1),0.0,tmp5);
-
-         //then right environment on that
-         tmp6.clear();
-         Contract(1.0,tmp5,shape(3),Environment::l[myID][col-1][0],shape(1),0.0,tmp6);
-
-         //move to a DArray<3> object: order (left-env,peps-row,right-env)
-         LOI = tmp6.reshape_clear(shape(Environment::r[myID][col][0].shape(2),Environment::I[myID](0,col).shape(3),Environment::l[myID][col-1][0].shape(2)));
-
-
-      }
-
-      // --- now for the middle sites, close down the operators on the left and construct new 1.0s --- 
-      for(int row = 1;row < Ly - 1;++row){
-
-         enum {i,j,k,o,m,n};
-
-         if( (*this)[ (row - 1)*Lx + col] != (*this)[row*Lx + col]){
-
-            //close down LOI with I if it contributes
-
-            //first add top to the right side, put it in I4
-            I4.clear();
-            Contract(1.0,Environment::r[myID][col][row],shape(2),RO[row],shape(0),0.0,I4);
-
-            I4bis.clear();
-            Contract(1.0,I4,shape(i,j,k,o),Environment::I[myID](row,col),shape(m,j,n,k),0.0,I4bis,shape(i,m,n,o));
-
-            Contract(1.0,I4bis,shape(2,3),Environment::l[myID][col-1][row],shape(1,2),0.0,RO[row-1]);
-
-            //expectation value:
-            ward = Dot(LOI,RO[row-1]);
-            nn_over.push_back(ward);
-
-            energy += 0.5 * ward;
-
-         }
-
-         // now construct the new left going renormalized operators
-
-         //first attach top to left unity
-         I4.clear();
-         Contract(1.0,Environment::r[myID][col][row],shape(0),LOU,shape(0),0.0,I4);
-
-         // and construct new left unity
-         Contract(1.0,I4,shape(i,j,k,o),Environment::U[myID](row,col),shape(k,i,m,n),0.0,I4bis,shape(j,n,o,m));
-
-         LOU.clear();
-         Contract(1.0,I4bis,shape(2,3),Environment::l[myID][col-1][row],shape(0,1),0.0,LOU);
-
-         //if it contributes, construct new left inverse
-         if( (*this)[ row*Lx + col] != (*this)[ (row + 1)*Lx + col]){
-
-            Contract(1.0,I4,shape(i,j,k,o),Environment::I[myID](row,col),shape(k,i,m,n),0.0,I4bis,shape(j,n,o,m));
-
-            LOI.clear();
-            Contract(1.0,I4bis,shape(2,3),Environment::l[myID][col-1][row],shape(0,1),0.0,LOI);
-
-         }
-
-      }
-
-      //last site on the right: close down on the incomings if possible
-
-      //first LI with I
-      if( (*this)[ (Ly - 2)*Lx + col] != (*this)[ (Ly - 1)*Lx + col]){
-
-         //paste top environment on
-         tmp5.clear();
-         Contract(1.0,Environment::r[myID][col][Ly - 1],shape(1),Environment::I[myID](Ly-1,col),shape(1),0.0,tmp5);
-
-         //then bottom enviroment
-         Contract(1.0,tmp5,shape(3),Environment::l[myID][col-1][Ly-1],shape(1),0.0,tmp6);
-
-         //move to a DArray<3> object
-         RO[Ly - 2] = tmp6.reshape_clear(shape(Environment::r[myID][col][Ly - 1].shape(0),Environment::I[myID](Ly-1,col).shape(0),Environment::l[myID][col-1][Ly - 1].shape(0)));
-
-         //add to energy
-         ward = Dot(LOI,RO[Ly - 2]);
-         nn_over.push_back(ward);
-
-         energy += 0.5 * ward;
-
-      }
-
-   }
-
-   // -- (3) -- || top row = Ly-1: again similar to overlap calculation
-
-   //first construct the right renormalized operators
-
-   //tmp comes out index (r,l)
-   tmp4.clear();
-   Contract(1.0,Environment::r[myID][Lx-2][Ly - 1],shape(1),Environment::l[myID][Lx-2][Ly - 1],shape(1),0.0,tmp4);
-
-   //reshape tmp to a 2-index array
-   R[Ly - 2] = tmp4.reshape_clear(shape(Environment::r[myID][Lx-2][Ly - 1].shape(0),Environment::l[myID][Lx-2][Ly - 1].shape(0)));
-
-   //now construct the rest
-   for(int row = Ly - 2;row > 0;--row){
-
-      tmp3.clear();
-      Contract(1.0,Environment::r[myID][Lx-2][row],shape(2),R[row],shape(0),0.0,tmp3);
-
-      R[row - 1].clear();
-      Contract(1.0,tmp3,shape(1,2),Environment::l[myID][Lx-2][row],shape(1,2),0.0,R[row-1]);
-
-   }
-
-   //construct the left going operators on the first top site
-
-   //first unity
-   tmp5.clear();
-   Contract(1.0,Environment::U[myID](0,Lx-1),shape(2),Environment::l[myID][Lx-2][0],shape(1),0.0,tmp5);
-
-   LU = tmp5.reshape_clear(shape(Environment::U[myID](0,Lx-1).shape(3),Environment::l[myID][Lx-2][0].shape(2)));
-
-   //then inverse if necessary
-   if( (*this)[Lx - 1] != (*this)[2*Lx - 1]){
-
-      tmp5.clear();
-      Contract(1.0,Environment::I[myID](0,Lx-1),shape(2),Environment::l[myID][Lx-2][0],shape(1),0.0,tmp5);
-
-      LI = tmp5.reshape_clear(shape(Environment::I[myID](0,Lx-1).shape(3),Environment::l[myID][Lx-2][0].shape(2)));
-
-   }
-
-   //middle of the chain:
-   for(int row = 1;row < Ly-1;++row){
-
-      //first close down the inverse term from the previous site for the energy
-
-      if( (*this)[ (row - 1)*Lx + Lx - 1] != (*this)[row*Lx + Lx - 1] ) {
-
-         //construct the right intermediate contraction (paste bottom to right)
-         tmp3.clear();
-         Contract(1.0,Environment::l[myID][Lx-2][row],shape(2),R[row],shape(1),0.0,tmp3);
-
-         // 1) paste Sx to the right
-         M = Environment::I[myID](row,Lx-1).shape(0);
-         N = tmp3.shape(0);
-         K = tmp3.shape(1) * tmp3.shape(2);
-
-         blas::gemm(CblasRowMajor, CblasNoTrans, CblasTrans, M, N, K, 1.0, Environment::I[myID](row,Lx-1).data(),K,tmp3.data(),K,0.0,R[row-1].data(),N);
-
-         //contract with left inverse
-         ward = Dot(LI,R[row - 1]);
-         nn_over.push_back(ward);
-
-         energy += 0.5 * ward;
-
-      }
-
-      //construct left renormalized operators for next site: first paste bottom to Left unity
-      tmp3.clear();
-      Contract(1.0,LU,shape(1),Environment::l[myID][Lx-2][row],shape(0),0.0,tmp3);
-
-      // ly construct new unity on the left
-      LU.resize(Environment::U[myID](row,Lx-1).shape(3),Environment::l[myID][Lx-2][row].shape(2));
-      blas::gemm(CblasRowMajor, CblasTrans, CblasNoTrans, M, N, K, 1.0, Environment::U[myID](row,Lx-1).data(),M,tmp3.data(),N,0.0,LU.data(),N);
-
-      // construct new left inverse if it contributes
-      if( (*this)[ row*Lx + Lx - 1] != (*this)[ (row + 1)*Lx + Lx - 1] ) {
-
-         LI.resize(Environment::I[myID](row,Lx-1).shape(3),Environment::l[myID][Lx-2][row].shape(2));
-         blas::gemm(CblasRowMajor, CblasTrans, CblasNoTrans, M, N, K, 1.0, Environment::I[myID](row,Lx-1).data(),M,tmp3.data(),N,0.0,LI.data(),N);
-
-      }
-
-   }
-
-   //finally close down on last top site
-
-   // I to close down LI
-   if( (*this)[ (Ly - 2)*Lx + Lx - 1] != (*this)[ (Ly - 1)*Lx + Lx - 1] ) {
-
-      //tmp comes out index (r,l)
-      tmp5.clear();
-      Contract(1.0,Environment::I[myID](Ly-1,Lx-1),shape(2),Environment::l[myID][Lx-2][Ly - 1],shape(1),0.0,tmp5);
-
-      //reshape tmp to a 2-index array
-      R[Ly - 2] = tmp5.reshape_clear(shape(Environment::I[myID](Ly-1,Lx-1).shape(0),Environment::l[myID][Lx-2][Ly - 1].shape(0)));
-
-      //energy
-      ward = Dot(LI,R[Ly-2]);
-      nn_over.push_back(ward);
-
-      energy += 0.5 * ward;
-
-   }
-
-
-   // #################################################################
-   // ### ----          Vertical Sz contribution is easy       ---- ### 
-   // #################################################################
-
-   cnt = 0;
-
-   for(int col = 0;col < Lx;++col){
-
-      for(int row = 0;row < Ly - 1;++row){
-
-         if( (*this)[row*Lx + col] != (*this)[(row + 1)*Lx + col] )
-            cnt -= 1;
-         else
-            cnt += 1;
-
-      }
-
-   }
-
-   energy += 0.25 * cnt * nn_over[0];
-
-   //finally set the local energy
-   EL = energy/nn_over[0];
+   for(int i = 1;i < nn_over.size();++i)
+      EL += 0.5 * nn_over[i]/nn_over[0];
 
 }
 
@@ -1006,9 +288,8 @@ void Walker::save(const char *filename){
 
    ofstream fout(filename);
 
-   for(int row = 0;row < Ly;++row)
-      for(int col = 0;col < Lx;++col)
-         fout << row << "\t" << col << "\t" << (*this)[row*Lx +col] << endl;
+   for(int site = 0;site < L;++site)
+      fout << site << "\t" << (*this)[site] << endl;
 
 }
 
@@ -1020,10 +301,9 @@ int Walker::num_diff(const Walker &walker_i) const {
 
    int num_diff = 0;
 
-   for(int r = 0;r < Ly;++r)
-      for(int c = 0;c < Lx;++c)
-         if( (*this)[r*Lx + c] != walker_i[r*Lx + c])
-            num_diff++;
+   for(int site = 0;site < L;++site)
+      if( (*this)[site] != walker_i[site])
+         num_diff++;
 
    return num_diff;
 
@@ -1038,42 +318,11 @@ void Walker::load(const char *filename){
 
    bool tmp;
 
-   for(int row = 0;row < Ly;++row)
-      for(int col = 0;col < Lx;++col){
+   for(int site = 0;site < L;++site){
 
-         fin >> row >> col >> tmp; 
-         (*this)[row*Lx + col] = tmp;
+      fin >> site >> tmp; 
+      (*this)[site] = tmp;
 
-      }
-
-}
-
-/**
- * calculate the overlap of the trial peps with the walker
- * @param peps trial wave function represented as peps
- */
-double Walker::calc_overlap(const PEPS< double > &peps){
-
-#ifdef _OPENMP
-   int myID = omp_get_thread_num();
-#else
-   int myID = 0;
-#endif
-
-   // ---- || evaluate the expectation values in an MPO/MPS manner, first from bottom to top, then left to right || ----
-
-   double energy = 0.0;
-
-   int M,N,K;
-
-   //calculate the single layer contractions first:
-   Environment::U[myID].fill('H',false,peps,*this);
-
-   //first construct the top and bottom (horizontal) environment layers
-   Environment::calc_overlap_env(peps,*this);
-
-   nn_over[0] = Environment::b[myID][Ly-2].dot(Environment::t[myID][Ly-2]);
-
-   return nn_over[0];
+   }
 
 }

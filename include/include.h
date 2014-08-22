@@ -11,3 +11,6 @@
 #include "global.h"
 
 #include "MPS.h"
+#include "Walker.h"
+
+#include "SL_MPS.h"

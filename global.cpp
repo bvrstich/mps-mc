@@ -22,6 +22,9 @@ namespace global{
 
    MPS<double> mps;
 
+   vector< SL_MPS > U;
+   vector< SL_MPS > I;
+
    int omp_num_threads;
 
    Random RN;
@@ -46,11 +49,24 @@ namespace global{
 #endif
 
       mps.resize(L);
+
+      U.resize(omp_num_threads);
+      I.resize(omp_num_threads);
       
       char filename[200];
       sprintf(filename,"/home/bright/bestanden/results/mps-mc/trial/Heis_1D/L=%d/DT=%d.mps",L,DT);
 
       mps.load(filename);
+
+      Walker walker;
+
+      U[0] = SL_MPS(mps,walker);
+
+      for(int thr = 1;thr < omp_num_threads;++thr)
+         U[thr] = U[0];
+
+      for(int thr = 0;thr < omp_num_threads;++thr)
+         I[thr] = U[thr];
 
    }
 

@@ -11,6 +11,7 @@ using std::vector;
 using std::complex;
 
 #include "MPS.h"
+#include "SL_MPS.h"
 
 using namespace btas;
 
@@ -26,6 +27,12 @@ namespace global {
 
    //!virtual dimension of the trial
    extern int DT;
+
+   //!single layer mps for energy calculation
+   extern vector< SL_MPS > U;
+
+   //!single layer mps for energy calculation
+   extern vector< SL_MPS > I;
 
    //!number of omp threads
    extern int omp_num_threads;
