@@ -1,5 +1,5 @@
-#ifndef GFQMC_H
-#define GFQMC_H
+#ifndef VMC_H
+#define VMC_H
 
 #include <iostream>
 #include <iomanip>
@@ -9,28 +9,23 @@
 using std::complex;
 using std::vector;
 
-class GFQMC {
+class VMC {
 
    public:
    
       //constructor with input trialwavefunction
-      GFQMC(double,int);
+      VMC(int);
       
       //Destructor
-      virtual ~GFQMC();
+      virtual ~VMC();
       
       //Let the walkers propagate for n_steps steps
       void walk(int);
 
-      void test();
-
       //Propagate my population of walkers for 1 timestep. Return the sum of the coeff of my walkers.
-      double propagate();
+      void propagate();
       
-      //Control the population of walkers based on scaling * weight
-      void PopulationControl(double);
-
-      //Calculate the single walker projected energies, update the energy history, calculate the fluctuation metric, and the total projected energy
+      //Calculate the single walker projected energies
       void sEP();
 
       //Write the projected energy, target energy
@@ -43,9 +38,6 @@ class GFQMC {
       
       //!The total desired number of walkers
       int Nw;
-
-      //!timestep
-      double dtau;
 
       //!projected energy at current timestep
       double EP;

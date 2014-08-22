@@ -183,6 +183,8 @@ void Walker::calc_EL(const MPS< double > &mps){
    U[myID].fill(false,mps,*this);
    I[myID].fill(true,mps,*this);
 
+   nn_over.clear();
+
    //construct right renormalized operator
    vector< TArray<double,1> > R(L - 2);
 

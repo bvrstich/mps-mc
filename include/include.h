@@ -12,5 +12,7 @@
 
 #include "MPS.h"
 #include "Walker.h"
-
 #include "SL_MPS.h"
+
+#include "Distribution.h"
+#include "VMC.h"

@@ -135,41 +135,17 @@ void Distribution::construct(const Walker &walker_i,double dtau,double ET){
    //f == i first 
    list.push_back(walker_i);
 
-   //first horizontal 'final' states
-   for(int r = 0;r < Ly;++r){
+   //construct 'final' states
+   for(int site = 0;site < L - 1;++site){
 
-      for(int c = 0;c < Lx - 1;++c){
+      if(walker_i[site] != walker_i[site + 1]){
 
-         if(walker_i[r*Lx + c] != walker_i[r*Lx + (c + 1)]){
+         Walker walker_f(walker_i);
 
-            Walker walker_f(walker_i);
+         walker_f[site] = !(walker_i[site]);
+         walker_f[site + 1] = !(walker_i[site + 1]);
 
-            walker_f[r*Lx + c] = !(walker_i[r*Lx + c]);
-            walker_f[r*Lx + (c + 1)] = !(walker_i[r*Lx + (c + 1)]);
-
-            list.push_back(walker_f);
-
-         }
-
-      }
-
-   }
-
-   //then vertical 'final' states
-   for(int c = 0;c < Lx;++c){
-
-      for(int r = 0;r < Ly - 1;++r){
-
-         if(walker_i[r*Lx + c] != walker_i[(r + 1)*Lx + c]){
-
-            Walker walker_f(walker_i);
-
-            walker_f[r*Lx + c] = !(walker_i[r*Lx + c]);
-            walker_f[(r + 1)*Lx + c] = !(walker_i[(r + 1)*Lx + c]);
-
-            list.push_back(walker_f);
-
-         }
+         list.push_back(walker_f);
 
       }
 
@@ -213,41 +189,17 @@ void Distribution::construct_VMC(const Walker &walker_i){
    //f == i first 
    list.push_back(walker_i);
 
-   //first horizontal 'final' states
-   for(int r = 0;r < Ly;++r){
+   //construct 'final' states
+   for(int site = 0;site < L - 1;++site){
 
-      for(int c = 0;c < Lx - 1;++c){
+      if(walker_i[site] != walker_i[site + 1]){
 
-         if(walker_i[r*Lx + c] != walker_i[r*Lx + (c + 1)]){
+         Walker walker_f(walker_i);
 
-            Walker walker_f(walker_i);
+         walker_f[site] = !(walker_i[site]);
+         walker_f[site + 1] = !(walker_i[site + 1]);
 
-            walker_f[r*Lx + c] = !(walker_i[r*Lx + c]);
-            walker_f[r*Lx + (c + 1)] = !(walker_i[r*Lx + (c + 1)]);
-
-            list.push_back(walker_f);
-
-         }
-
-      }
-
-   }
-
-   //then vertical 'final' states
-   for(int c = 0;c < Lx;++c){
-
-      for(int r = 0;r < Ly - 1;++r){
-
-         if(walker_i[r*Lx + c] != walker_i[(r + 1)*Lx + c]){
-
-            Walker walker_f(walker_i);
-
-            walker_f[r*Lx + c] = !(walker_i[r*Lx + c]);
-            walker_f[(r + 1)*Lx + c] = !(walker_i[(r + 1)*Lx + c]);
-
-            list.push_back(walker_f);
-
-         }
+         list.push_back(walker_f);
 
       }
 

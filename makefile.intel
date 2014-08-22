@@ -7,18 +7,15 @@
 # -----------------------------------------------------------------------------
 #   Sources for all modules
 # -----------------------------------------------------------------------------
-BINNAME = peps-gfqmc
-CPPSRC	= peps-gfqmc.cpp\
+BINNAME = mps-vmc
+CPPSRC	= mps-vmc.cpp\
            Random.cpp\
            global.cpp\
-           PEPS.cpp\
            Walker.cpp\
            Distribution.cpp\
            MPS.cpp\
-           compress.cpp\
-           Environment.cpp\
-           SL_PEPS.cpp\
-           GFQMC.cpp\
+           SL_MPS.cpp\
+           VMC.cpp\
            btas_defs.cpp
 
 OBJ	= $(CPPSRC:.cpp=.o)
