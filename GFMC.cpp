@@ -19,11 +19,11 @@ using std::ios;
 using namespace global;
 
 /**
- * constructor of the GFQMC object, takes input parameters that define the QMC walk.
+ * constructor of the GFMC object, takes input parameters that define the QMC walk.
  * @param dtau_in timestep
  * @param Nw_in number of Walker states
  */
-GFQMC::GFQMC(double dtau_in,int Nw_in){
+GFMC::GFMC(double dtau_in,int Nw_in){
 
    this->dtau = dtau_in;
    this->Nw = Nw_in;
@@ -37,28 +37,39 @@ GFQMC::GFQMC(double dtau_in,int Nw_in){
 /**
  * unnecessary destructor...
  */
-GFQMC::~GFQMC(){ }
+GFMC::~GFMC(){ }
 
 /**
  * initialize the walkers: read in distribution from walkers dir
  */
-void GFQMC::SetupWalkers(){
+void GFMC::SetupWalkers(){
 
-   walker.resize(1);
-   walker[0].calc_EL(peps);
+   walker.resize(Nw);
 
-   for(int i = 0;i < Nw;++i)
-      walker.push_back(walker[0]);
+   for(int i = 0;i < Nw;++i){
+
+      char walker_file[200];
+
+      sprintf(walker_file,"output/VMC/L=%d/D=%d/walkers/%d.walk",L,DT,i);
+
+      walker[i].load(walker_file);
+      
+      walker[i].calc_EL(mps);
+
+      if(walker[i].gOverlap() < 0.0)
+         walker[i].sign_flip();
+
+   }
 
 }
 
-void GFQMC::walk(const int n_steps){
+void GFMC::walk(const int n_steps){
 
    //set projected energy
    sEP();
 
    char filename[200];
-   sprintf(filename,"output/%dx%d/D=%d.txt",Lx,Ly,DT);
+   sprintf(filename,"output/GFMC/L=%d/D=%d.txt",L,DT);
 
    ofstream output(filename,ios::trunc);
 
@@ -139,7 +150,7 @@ void GFQMC::walk(const int n_steps){
 /**
  * Here the trotter terms, propagator terms are applied to every walker individually.
  */
-double GFQMC::propagate(){
+double GFMC::propagate(){
 
    double sum = 0.0;
    int num_rej = 0;
@@ -161,7 +172,7 @@ double GFQMC::propagate(){
       double prev_EL = walker[i].gEL();
 
       //construct distribution
-      dist[myID].construct(walker[i],dtau,-62.8656);
+      dist[myID].construct(walker[i],dtau,EP);
       dist[myID].check_negative();
 
       double nrm = dist[myID].normalize();
@@ -175,7 +186,7 @@ double GFQMC::propagate(){
       walker[i].multWeight(nrm);
 
       //calculate new properties
-      walker[i].calc_EL(peps);
+      walker[i].calc_EL(mps);
 
       double EL = walker[i].gEL();
 
@@ -199,7 +210,7 @@ double GFQMC::propagate(){
 /**
  * redistribute the weights to stabilize the walk, keep the population in check
  */
-void GFQMC::PopulationControl(double scaling){
+void GFMC::PopulationControl(double scaling){
 
    double minw = 1.0;
    double maxw = 1.0;
@@ -220,7 +231,7 @@ void GFQMC::PopulationControl(double scaling){
 
       if (weight < 0.25){ //Energy doesn't change statistically
 
-         int nCopies = (int) ( weight + rgen_pos<double>());
+         int nCopies = (int) ( weight + rgen_pos());
 
          if(nCopies == 0){
 
@@ -238,7 +249,7 @@ void GFQMC::PopulationControl(double scaling){
 
       if(weight > 1.5){ //statically energy doesn't change
 
-         int nCopies =(int) ( weight + rgen_pos<double>());
+         int nCopies =(int) ( weight + rgen_pos());
          double new_weight = weight / (double) nCopies;
 
          walker[i].sWeight(new_weight);
@@ -276,7 +287,7 @@ void GFQMC::PopulationControl(double scaling){
 /**
  * set total projected energy of the walkers at a certain timestep
  */
-void GFQMC::sEP(){
+void GFMC::sEP(){
 
    double projE_num = 0.0;
    double projE_den = 0.0;
@@ -301,10 +312,10 @@ void GFQMC::sEP(){
 /**
  * write output to file
  */
-void GFQMC::write(const int step){
+void GFMC::write(const int step){
 
    char filename[200];
-   sprintf(filename,"output/%dx%d/D=%d.txt",Lx,Ly,DT);
+   sprintf(filename,"output/GFMC/L=%d/D=%d.txt",L,DT);
 
    ofstream output(filename,ios::app);
    output.precision(16);

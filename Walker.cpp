@@ -180,6 +180,8 @@ void Walker::calc_EL(const MPS< double > &mps){
    int myID = 0;
 #endif
 
+   nn_over.clear();
+
    U[myID].fill(false,mps,*this);
    I[myID].fill(true,mps,*this);
 

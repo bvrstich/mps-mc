@@ -34,6 +34,9 @@ namespace global {
    //!single layer mps for energy calculation
    extern vector< SL_MPS > I;
 
+   //!backup walkers for stability of algorithm
+   extern vector< Walker > backup_walker;
+
    //!number of omp threads
    extern int omp_num_threads;
 
@@ -44,6 +47,8 @@ namespace global {
 
    template<typename T>
       T rgen();
+
+   double rgen_pos();
 
 };
 

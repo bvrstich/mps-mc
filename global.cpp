@@ -25,6 +25,8 @@ namespace global{
    vector< SL_MPS > U;
    vector< SL_MPS > I;
 
+   vector< Walker > backup_walker;
+
    int omp_num_threads;
 
    Random RN;
@@ -52,6 +54,8 @@ namespace global{
 
       U.resize(omp_num_threads);
       I.resize(omp_num_threads);
+
+      backup_walker.resize(omp_num_threads);
       
       char filename[200];
       sprintf(filename,"/home/bright/bestanden/results/mps-mc/trial/Heis_1D/L=%d/DT=%d.mps",L,DT);
@@ -85,5 +89,14 @@ namespace global{
          return 2.0*RN() - 1.0;
 
       }
+
+   //!function which generates uniform random numbers between [0:1]
+   double rgen_pos(){ 
+
+      return RN();
+
+   }
+
+
 
 }
