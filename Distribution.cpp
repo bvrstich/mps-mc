@@ -229,14 +229,9 @@ int Distribution::metropolis() const {
 
    double x = RN();
 
-   while( (*this)[trial] < x){
-
-      trial = (RN()*(list.size() - 1) + 1);
-
-      x = RN();
-
-   }
-
-   return trial;
+   if( (*this)[trial] < x)
+      return 0;
+   else
+      return trial;
 
 }
