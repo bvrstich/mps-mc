@@ -26,7 +26,4 @@ int main(int argc,char *argv[]){
    //initialize the dimensions of the problem, set the trial
    global::init(D,d,L);
 
-   Walker walker;
-   walker.calc_EL(global::mps);
-
 }
