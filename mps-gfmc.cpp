@@ -30,6 +30,6 @@ int main(int argc,char *argv[]){
    int Nw = 100000;
 
    GFMC gfmc(dtau,Nw);
-   gfmc.walk(1);
+   gfmc.walk(1000000);
 
 }
