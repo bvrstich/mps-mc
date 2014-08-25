@@ -213,7 +213,7 @@ void Distribution::construct_VMC(const Walker &walker_i){
 
       list[i].sign_flip();
 
-      (*this)[i] = walker_i.gnn_over(i) * walker_i.gnn_over(i) / ( walker_i.gnn_over(0) * walker_i.gnn_over(0) );
+      (*this)[i] = -walker_i.gnn_over(i) /  walker_i.gnn_over(0);
 
    }
 
@@ -225,13 +225,18 @@ void Distribution::construct_VMC(const Walker &walker_i){
 int Distribution::metropolis() const {
 
    //draw uniform move
-   int trial = (RN()*(list.size() - 1) + 1);
+   int trial = RN()*list.size();
 
    double x = RN();
 
-   if( (*this)[trial] < x)
-      return 0;
-   else
-      return trial;
+   while( (*this)[trial] < x){
+
+      trial = RN()*list.size();
+
+      x = RN();
+
+   }
+
+   return trial;
 
 }

@@ -275,10 +275,10 @@ void Walker::calc_EL(const MPS< double > &mps){
    nn_over[0] = blas::dot(LU.size(), LU.data(), 1, U[myID][L-1].data(), 1);
 
    //calculate the local energy
-   EL = this->pot_en();
+   EL = this->pot_en() * nn_over[0];
 
    for(int i = 1;i < nn_over.size();++i)
-      EL += 0.5 * nn_over[i]/nn_over[0];
+      EL += 0.5 * nn_over[i];
 
 }
 

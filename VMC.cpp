@@ -65,6 +65,9 @@ void VMC::walk(const int n_steps){
    //set projected energy
    sEP();
 
+   cum_den = 0.0;
+   cum_num = 0.0;
+
    char filename[200];
    sprintf(filename,"output/L=%d/D=%d.txt",L,DT);
 
@@ -90,6 +93,7 @@ void VMC::walk(const int n_steps){
       cout << "        Step = " << step << endl;
       cout << "   # walkers = " << walker.size() << endl;
       cout << "         E_P = " << EP << endl;
+      cout << "         cumulatitive E_P = " << cum_num/cum_den << endl;
       cout << "---------------------------------------------------------" << endl;
 #endif
 
@@ -114,6 +118,13 @@ void VMC::walk(const int n_steps){
 
          if(min_en > walker[i].gEL())
             min_en = walker[i].gEL();
+
+      }
+
+      if(step == 100){
+
+         cum_den = 0.0;
+         cum_num = 0.0;
 
       }
 
@@ -147,6 +158,7 @@ void VMC::propagate(){
 
       //construct distribution
       dist[myID].construct_VMC(walker[i]);
+      dist[myID].check_negative();
 
       //draw new walker
       int pick = dist[myID].metropolis();
@@ -173,10 +185,13 @@ void VMC::sEP(){
       double w_loc_en = walker[wi].gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
 
       //For the projected energy
-      projE_num += walker[wi].gWeight() * w_loc_en;
-      projE_den += walker[wi].gWeight();
+      projE_num += walker[wi].gWeight() * w_loc_en * walker[wi].gsign();
+      projE_den += walker[wi].gWeight() * walker[wi].gOverlap() * walker[wi].gsign();
 
    }
+
+   cum_num += projE_num;
+   cum_den += projE_den;
 
    EP = projE_num / projE_den;
 

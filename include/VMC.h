@@ -42,6 +42,9 @@ class VMC {
       //!projected energy at current timestep
       double EP;
 
+      double cum_num;
+      double cum_den;
+
       //!The walkers
       std::vector<Walker> walker;
 
