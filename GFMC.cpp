@@ -46,20 +46,15 @@ void GFMC::SetupWalkers(){
 
    walker.resize(Nw);
 
-   for(int i = 0;i < Nw;++i){
+   walker[0] = Walker(1);
+   walker[1] = Walker(0);
 
-      char walker_file[200];
+   for(int i = 1;i < Nw;++i){
 
-      sprintf(walker_file,"output/VMC/L=%d/D=%d/walkers/%d.walk",L,DT,i);
-
-      walker[i].load(walker_file);
-      
-      walker[i].calc_EL(mps);
-
-      if(walker[i].gOverlap() < 0.0)
-         walker[i].sign_flip();
-
-      cout << i << "\t" << walker[i].gEL() << endl;
+      if(i % 2 == 0)
+         walker[i] = walker[0];
+      else
+         walker[i] = walker[1];
 
    }
 
@@ -155,11 +150,10 @@ void GFMC::walk(const int n_steps){
 double GFMC::propagate(){
 
    double sum = 0.0;
-   int num_rej = 0;
 
    double width = sqrt(2.0/dtau);
 
-#pragma omp parallel for reduction(+: sum,num_rej)
+#pragma omp parallel for reduction(+: sum)
    for(int i = 0;i < walker.size();i++){
 
 #ifdef _OPENMP
@@ -171,11 +165,8 @@ double GFMC::propagate(){
       //backup the walker for stability
       backup_walker[myID] = walker[i];
 
-      double prev_EL = walker[i].gEL();
-
       //construct distribution
       dist[myID].construct(walker[i],dtau,0.0);
-      dist[myID].check_negative();
 
       double nrm = dist[myID].normalize();
 
@@ -190,26 +181,9 @@ double GFMC::propagate(){
       //calculate new properties
       walker[i].calc_EL(mps);
 
-      double EL = walker[i].gEL();
-
-      if( (EL < prev_EL - width) || (EL > prev_EL + width) ){//very rare event, will cause numerical unstability
-
-         num_rej++;
-
-         //copy the state back!
-         walker[i] = backup_walker[myID];
-
-      }
-
       sum += walker[i].gWeight();
 
    }
-
-#ifdef _DEBUG
-      cout << endl;
-      cout << "Number rejected:\t" << num_rej << endl;
-      cout << endl;
-#endif
 
    return sum;
 
@@ -300,16 +274,13 @@ void GFMC::sEP(){
    double projE_num = 0.0;
    double projE_den = 0.0;
 
-   double projE_abs_num = 0.0;
-   double projE_abs_den = 0.0;
-
    for(int wi = 0;wi < walker.size();wi++){
 
-      double w_loc_en = walker[wi].gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
+      double w_loc_en = walker[wi].gEL() * walker[wi].gsign(); // <Psi_T | H | walk > / <Psi_T | walk >
 
       //For the projected energy
       projE_num += walker[wi].gWeight() * w_loc_en;
-      projE_den += walker[wi].gWeight();
+      projE_den += walker[wi].gWeight() * walker[wi].gOverlap() * walker[wi].gsign();
 
    }
 
