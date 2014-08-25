@@ -59,6 +59,8 @@ void GFMC::SetupWalkers(){
       if(walker[i].gOverlap() < 0.0)
          walker[i].sign_flip();
 
+      cout << i << "\t" << walker[i].gEL() << endl;
+
    }
 
 }
@@ -172,7 +174,7 @@ double GFMC::propagate(){
       double prev_EL = walker[i].gEL();
 
       //construct distribution
-      dist[myID].construct(walker[i],dtau,EP);
+      dist[myID].construct(walker[i],dtau,0.0);
       dist[myID].check_negative();
 
       double nrm = dist[myID].normalize();
@@ -202,6 +204,12 @@ double GFMC::propagate(){
       sum += walker[i].gWeight();
 
    }
+
+#ifdef _DEBUG
+      cout << endl;
+      cout << "Number rejected:\t" << num_rej << endl;
+      cout << endl;
+#endif
 
    return sum;
 
