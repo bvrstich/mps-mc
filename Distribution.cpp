@@ -74,22 +74,6 @@ double Distribution::normalize(){
  */
 int Distribution::draw() const {
 
-   //Get what you should do
-   double x = RN();
-
-   int cnt = 0;
-
-   double sum = (*this)[0];
-
-   while ( (sum <= x) && (cnt < this->size() - 1) ){
-
-      cnt += 1;
-      sum += (*this)[cnt];
-
-   }
-
-   return cnt;
-
 }
 
 /** 
@@ -154,13 +138,8 @@ void Distribution::construct(const Walker &walker_i,double dtau,double ET){
 
    (*this)[0] = 1.0 - dtau * (walker_i.pot_en() - ET);
 
-   for(int i = 1;i < list.size();++i){
-
-      (*this)[i] = - 0.5 * dtau * ( walker_i.gnn_over(i) / walker_i.gnn_over(0) );
-
-      list[i].sign_flip();
-
-   }
+   for(int i = 1;i < list.size();++i)
+      (*this)[i] = 0.5 * dtau * ( walker_i.gnn_over(i) / walker_i.gnn_over(0) );
 
 }
 

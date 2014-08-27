@@ -45,21 +45,17 @@ GFMC::~GFMC(){ }
 void GFMC::SetupWalkers(){
 
    walker.resize(Nw);
+   walker[0].calc_EL(mps);
 
-   for(int i = 0;i < Nw;++i){
+   walker[1] = Walker(1);
+   walker[1].calc_EL(mps);
 
-      char walker_file[200];
+   for(int i = 2;i < Nw;++i){
 
-      sprintf(walker_file,"output/VMC/L=%d/D=%d/walkers/%d.walk",L,DT,i);
-
-      walker[i].load(walker_file);
-      
-      walker[i].calc_EL(mps);
-
-      if(walker[i].gOverlap() < 0.0)
-         walker[i].sign_flip();
-
-      cout << i << "\t" << walker[i].gEL() << endl;
+      if( (i % 2) == 0 )
+         walker[i] = walker[0];
+      else
+         walker[i] = walker[1];
 
    }
 

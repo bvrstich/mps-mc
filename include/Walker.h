@@ -53,10 +53,6 @@ class Walker : public vector< bool > {
 
       void load(const char *filename);
 
-      int gsign() const;
-
-      void sign_flip();
-
       int num_diff(const Walker &) const;
 
       double calc_overlap(const MPS< double > &);
@@ -65,9 +61,6 @@ class Walker : public vector< bool > {
 
       //!The walker weight
       double weight;
-
-      //!sign of the walker
-      int sign;
 
       //!local energy
       double EL;

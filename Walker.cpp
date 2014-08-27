@@ -24,8 +24,6 @@ Walker::Walker(int option) : std::vector< bool >( L ){
 
    weight = 1.0;
 
-   sign = 1;
-
    for(int site = 0;site < L;++site){
 
       if( (site + option) % 2 == 0)
@@ -47,23 +45,12 @@ Walker::Walker(const Walker &walker) : std::vector< bool >(walker) {
    this->nn_over = walker.gnn_over();
    this->EL = walker.gEL();
 
-   this->sign = walker.gsign();
-
 }
 
 /**
  * destructor
  */
 Walker::~Walker(){ }
-
-/**
- * @return the sign of the walker
- */
-int Walker::gsign() const {
-
-   return sign;
-
-}
 
 /** 
  * @return the weight corresponding to the walker
@@ -135,15 +122,6 @@ ostream &operator<<(ostream &output,const Walker &walker_p){
       output << walker_p[site];
 
    return output;
-
-}
-
-/**
- * flip the sign of the walker
- */
-void Walker::sign_flip(){
-
-   sign *= -1;
 
 }
 
