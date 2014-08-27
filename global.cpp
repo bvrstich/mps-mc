@@ -58,7 +58,7 @@ namespace global{
       backup_walker.resize(omp_num_threads);
       
       char filename[200];
-      sprintf(filename,"/home/bright/bestanden/results/mps-mc/trial/Heis_1D/L=%d/DT=%d.mps",L,DT);
+      sprintf(filename,"/home/bright/bestanden/results/mps-mc/trial/Heis_1D/L=%d/Psi0/DT=%d.mps",L,DT);
 
       mps.load(filename);
 

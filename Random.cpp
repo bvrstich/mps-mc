@@ -1,3 +1,4 @@
+#include <iostream>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
 #include <omp.h>
@@ -7,7 +8,8 @@
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on September 4, 2013 */
 
-using namespace std;
+using std::cout;
+using std::endl;
 
 Random::Random(){
 

@@ -24,8 +24,6 @@ Walker::Walker(int option) : std::vector< bool >( L ){
 
    weight = 1.0;
 
-   sign = 1;
-
    for(int site = 0;site < L;++site){
 
       if( (site + option) % 2 == 0)
@@ -47,23 +45,12 @@ Walker::Walker(const Walker &walker) : std::vector< bool >(walker) {
    this->nn_over = walker.gnn_over();
    this->EL = walker.gEL();
 
-   this->sign = walker.gsign();
-
 }
 
 /**
  * destructor
  */
 Walker::~Walker(){ }
-
-/**
- * @return the sign of the walker
- */
-int Walker::gsign() const {
-
-   return sign;
-
-}
 
 /** 
  * @return the weight corresponding to the walker
@@ -135,15 +122,6 @@ ostream &operator<<(ostream &output,const Walker &walker_p){
       output << walker_p[site];
 
    return output;
-
-}
-
-/**
- * flip the sign of the walker
- */
-void Walker::sign_flip(){
-
-   sign *= -1;
 
 }
 
@@ -278,7 +256,7 @@ void Walker::calc_EL(const MPS< double > &mps){
    EL = this->pot_en() * nn_over[0];
 
    for(int i = 1;i < nn_over.size();++i)
-      EL += 0.5 * nn_over[i];
+      EL -= 0.5 * nn_over[i];
 
 }
 
@@ -326,5 +304,43 @@ void Walker::load(const char *filename){
       (*this)[site] = tmp;
 
    }
+
+}
+
+/**
+ * calculate the overlap with the trial
+ * @param mps trial wave function represented as a matrix product state
+ */
+double Walker::calc_overlap(const MPS< double > &mps){
+
+   SL_MPS C(mps,*this);
+
+   //construct right renormalized operator
+   vector< TArray<double,1> > R(L - 1);
+
+   int m,n;
+   double ward;
+
+   //rightmost site
+   int dim = C[L-1].shape(0);
+
+   R[L-2].resize(dim);
+
+   blas::copy(dim, C[L-1].data(), 1, R[L-2].data(), 1);
+
+   for(int i = L - 2;i > 0;--i){
+
+      m = C[i].shape(0);
+      n = C[i].shape(1);
+
+      R[i-1].resize(m);
+
+      blas::gemv(CblasRowMajor, CblasNoTrans, m, n, 1.0, C[i].data(), n, R[i].data(), 1, 0.0, R[i - 1].data(), 1);
+
+   }
+
+   dim = R[0].shape(0);
+
+   return blas::dot(dim,R[0].data(),1,C[0].data(),1);
 
 }
