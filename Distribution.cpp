@@ -74,6 +74,19 @@ double Distribution::normalize(){
  */
 int Distribution::draw() const {
 
+   //Get what you should do
+   int trial = RN()*this->size();
+   double x = RN();
+
+   while((*this)[trial] < x){
+
+      trial = RN()*this->size();
+      x = RN();
+
+   }
+
+   return trial;
+
 }
 
 /** 

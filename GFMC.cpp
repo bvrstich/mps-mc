@@ -84,9 +84,6 @@ void GFMC::walk(const int n_steps){
       //Propagate the walkers of each rank separately
       double wsum = propagate();
 
-      //Form the total sum of the walker weights and calculate the scaling for population control
-      double avgw = wsum / (double)walker.size();
-
       double scaling = Nw / wsum;
 
       double ET = 1.0/dtau * ( 1 - 1.0/scaling);
@@ -113,9 +110,7 @@ void GFMC::walk(const int n_steps){
       double max_en = -100.0;
       double min_en = 100.0;
 
-      int min_index = 0;
-
-      for(int i = 0;i < walker.size();++i){
+      for(unsigned int i = 0;i < walker.size();++i){
 
          if(max_ov < std::abs(walker[i].gOverlap()))
             max_ov = std::abs(walker[i].gOverlap());
@@ -156,7 +151,7 @@ double GFMC::propagate(){
    double width = sqrt(2.0/dtau);
 
 #pragma omp parallel for reduction(+: sum,num_rej)
-   for(int i = 0;i < walker.size();i++){
+   for(unsigned int i = 0;i < walker.size();i++){
 
 #ifdef _OPENMP
       int myID = omp_get_thread_num();
@@ -219,11 +214,10 @@ void GFMC::PopulationControl(double scaling){
    double minw = 1.0;
    double maxw = 1.0;
 
-   double sum = 0.0;
-
-   for(int i = 0;i < walker.size();i++){
-
+   for(unsigned int i = 0;i < walker.size();i++)
       walker[i].multWeight(scaling);
+
+   for(unsigned int i = 0;i < walker.size();i++){
 
       double weight = walker[i].gWeight();
 
@@ -233,7 +227,7 @@ void GFMC::PopulationControl(double scaling){
       if(weight > maxw)
          maxw = weight;
 
-      if (weight < 0.25){ //Energy doesn't change statistically
+      if (weight < 0.10){ //Energy doesn't change statistically
 
          int nCopies = (int) ( weight + rgen_pos());
 
@@ -251,7 +245,7 @@ void GFMC::PopulationControl(double scaling){
 
       }
 
-      if(weight > 1.5){ //statically energy doesn't change
+      if(weight > 2.0){ //statically energy doesn't change
 
          int nCopies =(int) ( weight + rgen_pos());
          double new_weight = weight / (double) nCopies;
@@ -272,9 +266,16 @@ void GFMC::PopulationControl(double scaling){
 
       }
 
-      sum += weight;
-
    }
+
+   double sum = 0.0;
+
+   for(unsigned int i = 0;i < walker.size();++i)
+      sum += walker[i].gWeight();
+   
+   //rescale the weights to unity for correct ET estimate in next iteration
+   for(unsigned int i = 0;i < walker.size();++i)
+      walker[i].multWeight((double)Nw/sum);
 
 #ifdef _DEBUG
    cout << endl;
@@ -296,10 +297,7 @@ void GFMC::sEP(){
    double projE_num = 0.0;
    double projE_den = 0.0;
 
-   double projE_abs_num = 0.0;
-   double projE_abs_den = 0.0;
-
-   for(int wi = 0;wi < walker.size();wi++){
+   for(unsigned int wi = 0;wi < walker.size();wi++){
 
       double w_loc_en = walker[wi].gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
 

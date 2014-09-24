@@ -10,6 +10,8 @@ using std::vector;
 
 using namespace btas;
 
+class Walker;
+
 /**
  * @author Brecht Verstichel
  * @date 26-03-2014\n\n
@@ -24,6 +26,8 @@ class MPS : public vector< TArray<T,3> > {
 
       MPS(int D);
 
+      MPS(const Walker &);
+
       //copy constructor
       MPS(const MPS &);
 
@@ -35,6 +39,10 @@ class MPS : public vector< TArray<T,3> > {
       void scal(T );
 
       void load(const char *);
+
+      double dot(const MPS<double> &) const;
+
+      double energy() const;
 
    private:
 

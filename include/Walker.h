@@ -55,8 +55,6 @@ class Walker : public vector< bool > {
 
       int num_diff(const Walker &) const;
 
-      double calc_overlap(const MPS< double > &);
-
   private:
 
       //!The walker weight
@@ -67,6 +65,9 @@ class Walker : public vector< bool > {
 
       //!overlap of nn configurations with trial
       vector<double> nn_over;
+
+      //!overlap with trial
+      double overlap;
 
 };
 

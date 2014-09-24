@@ -8,6 +8,8 @@
 using std::ostream;
 using std::vector;
 
+class Walker;
+
 /**
  * @author Brecht Verstichel
  * @date 22-07-2014\n\n
