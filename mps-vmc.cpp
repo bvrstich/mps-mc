@@ -29,6 +29,6 @@ int main(int argc,char *argv[]){
    int Nw = 100000;
 
    VMC vmc(Nw);
-   vmc.walk(1000);
+   vmc.walk(100000);
 
 }
