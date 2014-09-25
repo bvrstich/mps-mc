@@ -27,6 +27,6 @@ int main(int argc,char *argv[]){
    global::init(D,d,L);
 
    double dtau = 0.01;
-   int Nw = 132893;
+   int Nw = 100000;
 
 }

@@ -45,17 +45,24 @@ GFMC::~GFMC(){ }
 void GFMC::SetupWalkers(){
 
    walker.resize(Nw);
-   walker[0].calc_EL(mps);
 
-   walker[1] = Walker(1);
-   walker[1].calc_EL(mps);
+   char filename[200];
+   sprintf(filename,"output/VMC/L=%d/D=%d.walk",L,DT);
 
-   for(int i = 2;i < Nw;++i){
+   ifstream input(filename);
 
-      if( (i % 2) == 0 )
-         walker[i] = walker[0];
-      else
-         walker[i] = walker[1];
+   for(int i = 0;i < Nw;++i){
+
+      for(unsigned int j = 0;j < walker[i].size();++j){
+
+         bool tmp;
+
+         input >> tmp;
+         walker[i][j] = tmp;
+
+         walker[i].calc_EL(global::mps);
+
+      }
 
    }
 
@@ -166,7 +173,6 @@ double GFMC::propagate(){
 
       //construct distribution
       dist[myID].construct(walker[i],dtau,0.0);
-      dist[myID].check_negative();
 
       double nrm = dist[myID].normalize();
 
@@ -192,7 +198,7 @@ double GFMC::propagate(){
 
       }
 
-      sum += walker[i].gWeight();
+      sum += walker[i].gsign() * walker[i].gWeight();
 
    }
 
@@ -271,7 +277,7 @@ void GFMC::PopulationControl(double scaling){
    double sum = 0.0;
 
    for(unsigned int i = 0;i < walker.size();++i)
-      sum += walker[i].gWeight();
+      sum += walker[i].gsign() * walker[i].gWeight();
    
    //rescale the weights to unity for correct ET estimate in next iteration
    for(unsigned int i = 0;i < walker.size();++i)
@@ -302,8 +308,8 @@ void GFMC::sEP(){
       double w_loc_en = walker[wi].gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
 
       //For the projected energy
-      projE_num += walker[wi].gWeight() * w_loc_en;
-      projE_den += walker[wi].gWeight();
+      projE_num += walker[wi].gsign() * walker[wi].gWeight() * w_loc_en;
+      projE_den += walker[wi].gsign() * walker[wi].gWeight();
 
    }
 

@@ -23,6 +23,7 @@ using namespace global;
 Walker::Walker(int option) : std::vector< bool >( L ){
 
    weight = 1.0;
+   sign = 1;
 
    for(int site = 0;site < L;++site){
 
@@ -44,6 +45,7 @@ Walker::Walker(const Walker &walker) : std::vector< bool >(walker) {
    this->weight = walker.gWeight();
    this->nn_over = walker.gnn_over();
    this->EL = walker.gEL();
+   this->sign = walker.gsign();
 
 }
 
@@ -51,6 +53,15 @@ Walker::Walker(const Walker &walker) : std::vector< bool >(walker) {
  * destructor
  */
 Walker::~Walker(){ }
+
+/**
+ * @return the sign of the walker
+ */
+int Walker::gsign() const {
+
+   return sign;
+
+}
 
 /** 
  * @return the weight corresponding to the walker
@@ -76,6 +87,15 @@ void Walker::multWeight(double factor){
 void Walker::sWeight(double new_weight){
 
    weight = new_weight;
+
+}
+
+/**
+ * flip the sign of the walker
+ */
+void Walker::sign_flip(){
+
+   sign *= -1;
 
 }
 
@@ -305,50 +325,4 @@ void Walker::load(const char *filename){
 
    }
 
-}
-
-/**
- * calculate the overlap of the walker with the mps
- * @param mps_in input mps
- */
-double Walker::calc_overlap(const MPS<double> &mps_in){
-
-   #ifdef _OPENMP
-   int myID = omp_get_thread_num();
-#else
-   int myID = 0;
-#endif
-
-   U[myID].fill(false,mps_in,*this);
-
-   //construct right renormalized operator
-   TArray<double,1> tmp;
-   TArray<double,1> E;
-
-   int m,n;
-   double ward;
-
-   //rightmost site
-   int dim = U[myID][L-1].shape(0);
-
-   E.resize(dim);
-
-   blas::copy(dim, U[myID][L-1].data(), 1, E.data(), 1);
-
-   for(int i = L - 2;i > 0;--i){
-
-      m = U[myID][i].shape(0);
-      n = U[myID][i].shape(1);
-
-      tmp.resize(m);
-      blas::gemv(CblasRowMajor, CblasNoTrans, m, n, 1.0, U[myID][i].data(), n, E.data(), 1, 0.0, tmp.data(), 1);
-
-      E = tmp;
-
-   }
-
-   dim = E.size();
-   overlap = blas::dot(dim,E.data(),1,U[myID][0].data(),1);
-
-   return overlap;
 }

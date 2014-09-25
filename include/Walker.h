@@ -30,7 +30,7 @@ class Walker : public vector< bool > {
       
       //Destructor
       virtual ~Walker();
-
+      
       double gWeight() const;
 
       void sWeight(double);
@@ -55,7 +55,9 @@ class Walker : public vector< bool > {
 
       int num_diff(const Walker &) const;
 
-      double calc_overlap(const MPS<double> &);
+      int gsign() const;
+
+      void sign_flip();
 
   private:
 
@@ -68,8 +70,8 @@ class Walker : public vector< bool > {
       //!overlap of nn configurations with trial
       vector<double> nn_over;
 
-      //!overlap with trial
-      double overlap;
+      //!sign of the walker
+      int sign;
 
 };
 
