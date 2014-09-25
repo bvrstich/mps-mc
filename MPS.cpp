@@ -186,7 +186,7 @@ double MPS<double>::energy() const{
    
    //S+
    Sp(0,0) = 0.0;
-   Sp(0,1) = -1.0;
+   Sp(0,1) = 1.0;
    Sp(1,0) = 0.0;
    Sp(1,1) = 0.0;
    
@@ -240,8 +240,7 @@ double MPS<double>::energy() const{
    Contract(1.0,mps[0],shape(j,k,l),Sm,shape(j,m),0.0,tmp,shape(m,k,l));
    Contract(1.0,tmp,shape(j,k,l),mps[0],shape(j,m,n),0.0,Lm,shape(k,l,m,n));
 
-   //for(int i = 1;i < L - 1;++i){
-   int i = 1;
+   for(int i = 1;i < L - 1;++i){
 
       //Sz
       tmp.clear();
@@ -253,8 +252,8 @@ double MPS<double>::energy() const{
       Lz.clear();
       Contract(1.0,I,shape(j,k,o,m,n),mps[i],shape(j,n,l),0.0,Lz,shape(k,o,m,l));
 
-      ener += blas::dot(Lz.size(),Lz.data(),1,R[i - 1].data(),1);
-/*
+      ener += blas::dot(Lz.size(),Lz.data(),1,R[i].data(),1);
+
       //create new Lz
       I.clear();
       Contract(1.0,LU,shape(k,l,m,n),tmp,shape(j,l,o),0.0,I,shape(j,k,o,m,n));
@@ -272,7 +271,7 @@ double MPS<double>::energy() const{
       Lp.clear();
       Contract(1.0,I,shape(j,k,o,m,n),mps[i],shape(j,n,l),0.0,Lp,shape(k,o,m,l));
 
-      ener += 0.5 * blas::dot(Lp.size(),Lp.data(),1,R[i - 1].data(),1);
+      ener += 0.5 * blas::dot(Lp.size(),Lp.data(),1,R[i].data(),1);
 
       //Sm
       tmp.clear();
@@ -284,7 +283,7 @@ double MPS<double>::energy() const{
       Lm.clear();
       Contract(1.0,I,shape(j,k,o,m,n),mps[i],shape(j,n,l),0.0,Lm,shape(k,o,m,l));
 
-      ener += 0.5 * blas::dot(Lm.size(),Lm.data(),1,R[i - 1].data(),1);
+      ener += 0.5 * blas::dot(Lm.size(),Lm.data(),1,R[i].data(),1);
       
       //create new Lm
       tmp.clear();
@@ -313,7 +312,7 @@ double MPS<double>::energy() const{
       LU.clear();
       Contract(1.0,I,shape(j,k,o,m,n),mps[i],shape(j,n,l),0.0,LU,shape(k,o,m,l));
 
-   //}
+   }
    
    //Sz
    tmp.clear();
@@ -341,7 +340,7 @@ double MPS<double>::energy() const{
    Contract(1.0,tmp,shape(j,k,l),mps[L-1],shape(j,m,n),0.0,LU,shape(k,l,m,n));
 
    ener += 0.5 * blas::dot(Lp.size(),Lp.data(),1,LU.data(),1);
-*/
+
    return ener;
 
 }
