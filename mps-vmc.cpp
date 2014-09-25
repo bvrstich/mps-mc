@@ -29,6 +29,11 @@ int main(int argc,char *argv[]){
    int Nw = 100000;
 
    VMC vmc(Nw);
-   vmc.walk(100000);
+   vmc.walk(3000);
+
+   char filename[200];
+   sprintf(filename,"output/VMC/L=%d/D=%d.walk",L,D);
+
+   vmc.dump(filename);
 
 }

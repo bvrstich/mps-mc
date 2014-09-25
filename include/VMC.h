@@ -9,6 +9,9 @@
 using std::complex;
 using std::vector;
 
+class Walker;
+class Distribution;
+
 class VMC {
 
    public:
@@ -34,6 +37,8 @@ class VMC {
       //Setup the walkers
       void SetupWalkers();
 
+      void dump(const char *);
+
    private:
       
       //!The total desired number of walkers
@@ -41,9 +46,6 @@ class VMC {
 
       //!projected energy at current timestep
       double EP;
-
-      double cum_num;
-      double cum_den;
 
       //!The walkers
       std::vector<Walker> walker;

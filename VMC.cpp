@@ -65,11 +65,8 @@ void VMC::walk(const int n_steps){
    //set projected energy
    sEP();
 
-   cum_den = 0.0;
-   cum_num = 0.0;
-
    char filename[200];
-   sprintf(filename,"output/L=%d/D=%d.txt",L,DT);
+   sprintf(filename,"output/VMC/L=%d/D=%d.txt",L,DT);
 
    ofstream output(filename,ios::trunc);
 
@@ -93,7 +90,6 @@ void VMC::walk(const int n_steps){
       cout << "        Step = " << step << endl;
       cout << "   # walkers = " << walker.size() << endl;
       cout << "         E_P = " << EP << endl;
-      cout << "         cumulatitive E_P = " << cum_num/cum_den << endl;
       cout << "---------------------------------------------------------" << endl;
 #endif
 
@@ -105,7 +101,7 @@ void VMC::walk(const int n_steps){
       double max_en = -100.0;
       double min_en = 100.0;
 
-      for(int i = 0;i < walker.size();++i){
+      for(unsigned int i = 0;i < walker.size();++i){
 
          if(max_ov < std::abs(walker[i].gOverlap()))
             max_ov = std::abs(walker[i].gOverlap());
@@ -118,13 +114,6 @@ void VMC::walk(const int n_steps){
 
          if(min_en > walker[i].gEL())
             min_en = walker[i].gEL();
-
-      }
-
-      if(step == 100){
-
-         cum_den = 0.0;
-         cum_num = 0.0;
 
       }
 
@@ -148,7 +137,7 @@ void VMC::walk(const int n_steps){
 void VMC::propagate(){
 
 #pragma omp parallel for
-   for(int i = 0;i < walker.size();i++){
+   for(unsigned int i = 0;i < walker.size();i++){
 
 #ifdef _OPENMP
       int myID = omp_get_thread_num();
@@ -157,8 +146,7 @@ void VMC::propagate(){
 #endif
 
       //construct distribution
-      dist[myID].construct_VMC(walker[i]);
-      dist[myID].check_negative();
+      dist[myID].construct(walker[i]);
 
       //draw new walker
       int pick = dist[myID].metropolis();
@@ -180,18 +168,15 @@ void VMC::sEP(){
    double projE_num = 0.0;
    double projE_den = 0.0;
 
-   for(int wi = 0;wi < walker.size();wi++){
+   for(unsigned int wi = 0;wi < walker.size();wi++){
 
       double w_loc_en = walker[wi].gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
 
       //For the projected energy
-      projE_num += walker[wi].gWeight() * w_loc_en * walker[wi].gsign();
-      projE_den += walker[wi].gWeight() * walker[wi].gOverlap() * walker[wi].gsign();
+      projE_num += walker[wi].gWeight() * w_loc_en;
+      projE_den += walker[wi].gWeight();
 
    }
-
-   cum_num += projE_num;
-   cum_den += projE_den;
 
    EP = projE_num / projE_den;
 
@@ -203,11 +188,27 @@ void VMC::sEP(){
 void VMC::write(const int step){
 
    char filename[200];
-   sprintf(filename,"output/L=%d/D=%d.txt",L,DT);
+   sprintf(filename,"output/VMC/L=%d/D=%d.txt",L,DT);
 
    ofstream output(filename,ios::app);
    output.precision(16);
    output << step << "\t\t" << walker.size() << "\t" << EP << endl;
    output.close();
+
+}
+
+
+/**
+ * dump the walkers to a single file
+ */
+void VMC::dump(const char *filename){
+
+   ofstream out(filename);
+   out.precision(16);
+
+   for(unsigned int i = 0;i < walker.size();++i)
+      for(int j = 0;j < L;++j)
+         out << walker[i][j] << " ";
+   out << endl;
 
 }

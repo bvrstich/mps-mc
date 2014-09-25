@@ -8,6 +8,8 @@
 using std::ostream;
 using std::vector;
 
+class Walker;
+
 /**
  * @author Brecht Verstichel
  * @date 22-07-2014\n\n
@@ -26,9 +28,7 @@ class Distribution : public vector<double> {
 
       virtual ~Distribution();
 
-      void construct(const Walker &,double,double);
-
-      void construct_VMC(const Walker &);
+      void construct(const Walker &);
 
       int gn() const;
 
