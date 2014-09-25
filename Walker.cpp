@@ -185,41 +185,54 @@ void Walker::calc_EL(const MPS< double > &mps){
 
    nn_over.clear();
 
-   //construct right renormalized operator
-   vector< TArray<double,1> > R(L - 2);
+   //construct right renormalized operator for real and inverted lattice
+   vector< TArray<double,1> > RU(L - 2);
+   vector< TArray<double,1> > RI(L - 2);
 
    int m,n;
-   double ward;
+   double value;
 
    //rightmost site
    int dim = U[myID][L-1].shape(0);
 
-   R[L-3].resize(dim);
+   RU[L-3].resize(dim);
+   RI[L-3].resize(dim);
 
-   blas::copy(dim, U[myID][L-1].data(), 1, R[L-3].data(), 1);
+   blas::copy(dim, U[myID][L-1].data(), 1, RU[L-3].data(), 1);
+   blas::copy(dim, I[myID][L-1].data(), 1, RI[L-3].data(), 1);
 
    for(int i = L - 2;i > 1;--i){
 
       m = U[myID][i].shape(0);
       n = U[myID][i].shape(1);
 
-      R[i-2].resize(m);
+      RU[i-2].resize(m);
+      RI[i-2].resize(m);
 
-      blas::gemv(CblasRowMajor, CblasNoTrans, m, n, 1.0, U[myID][i].data(), n, R[i - 1].data(), 1, 0.0, R[i - 2].data(), 1);
+      blas::gemv(CblasRowMajor, CblasNoTrans, m, n, 1.0, U[myID][i].data(), n, RU[i - 1].data(), 1, 0.0, RU[i - 2].data(), 1);
+      blas::gemv(CblasRowMajor, CblasNoTrans, m, n, 1.0, I[myID][i].data(), n, RI[i - 1].data(), 1, 0.0, RI[i - 2].data(), 1);
 
    }
 
    //now the left going operators: regular and inverse
-   TArray<double,1> LU;
-   TArray<double,1> LI;
+   TArray<double,1> LUU;
+   TArray<double,1> LUI;
+   TArray<double,1> LIU;
+   TArray<double,1> LII;
 
    TArray<double,1> tmp;
 
-   LU.resize(dim);
-   LI.resize(dim);
+   LUU.resize(dim);
+   LUI.resize(dim);
 
-   blas::copy(dim, U[myID][0].data(), 1, LU.data(), 1);
-   blas::copy(dim, I[myID][0].data(), 1, LI.data(), 1);
+   LIU.resize(dim);
+   LII.resize(dim);
+
+   blas::copy(dim, U[myID][0].data(), 1, LUU.data(), 1);
+   blas::copy(dim, I[myID][0].data(), 1, LUI.data(), 1);
+
+   blas::copy(dim, I[myID][0].data(), 1, LIU.data(), 1);
+   blas::copy(dim, U[myID][0].data(), 1, LII.data(), 1);
 
    //put the overlap here later!
    nn_over.push_back(0);
@@ -235,44 +248,63 @@ void Walker::calc_EL(const MPS< double > &mps){
 
          tmp.resize(n);
 
-         blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, I[myID][i].data(), n, LI.data(), 1, 0.0, tmp.data(), 1);
+         blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, I[myID][i].data(), n, LUI.data(), 1, 0.0, tmp.data(), 1);
+         value = blas::dot(n, tmp.data(), 1, RU[i-1].data(), 1);
 
-         nn_over.push_back(blas::dot(n, tmp.data(), 1, R[i-1].data(), 1));
+         blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, U[myID][i].data(), n, LII.data(), 1, 0.0, tmp.data(), 1);
+         value += blas::dot(n, tmp.data(), 1, RI[i-1].data(), 1);
+
+         nn_over.push_back(value);
 
       }
 
       //new left sides
 
-      //if it contributes make LI:
+      //if it contributes make LUI and LII:
       if( (*this)[i] != (*this)[i + 1]){
 
          m = I[myID][i].shape(0);
          n = I[myID][i].shape(1);
 
-         LI.resize(n);
+         LUI.resize(n);
+         LII.resize(n);
 
-         blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, I[myID][i].data(), n, LU.data(), 1, 0.0, LI.data(), 1);
+         blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, I[myID][i].data(), n, LUU.data(), 1, 0.0, LUI.data(), 1);
+         blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, U[myID][i].data(), n, LIU.data(), 1, 0.0, LII.data(), 1);
 
       }
 
-      //new left unity
+      //new left unity: LUU and LIU
       m = U[myID][i].shape(0);
       n = U[myID][i].shape(1);
 
       tmp.resize(n);
-      blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, U[myID][i].data(), n, LU.data(), 1, 0.0, tmp.data(), 1);
+      blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, U[myID][i].data(), n, LUU.data(), 1, 0.0, tmp.data(), 1);
 
-      LU.resize(n);
-      blas::copy(n, tmp.data(), 1, LU.data(), 1);
+      LUU.resize(n);
+      blas::copy(n, tmp.data(), 1, LUU.data(), 1);
+
+      tmp.resize(n);
+      blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, I[myID][i].data(), n, LIU.data(), 1, 0.0, tmp.data(), 1);
+
+      LIU.resize(n);
+      blas::copy(n, tmp.data(), 1, LIU.data(), 1);
 
    }
 
    //final contribution to the energy
-   if( (*this)[L - 2] != (*this)[L - 1])
-      nn_over.push_back(blas::dot(LI.size(), LI.data(), 1, I[myID][L-1].data(), 1));
+   if( (*this)[L - 2] != (*this)[L - 1]){
+
+      value = blas::dot(LUI.size(), LUI.data(), 1, I[myID][L-1].data(), 1);
+      value += blas::dot(LII.size(), LII.data(), 1, U[myID][L-1].data(), 1);
+
+      nn_over.push_back(value);
+
+   }
 
    //overlap
-   nn_over[0] = blas::dot(LU.size(), LU.data(), 1, U[myID][L-1].data(), 1);
+   nn_over[0] = blas::dot(LUU.size(), LUU.data(), 1, U[myID][L-1].data(), 1);
+   nn_over[0] += blas::dot(LII.size(), LIU.data(), 1, I[myID][L-1].data(), 1);
 
    //calculate the local energy
    EL = this->pot_en();

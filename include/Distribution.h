@@ -46,6 +46,8 @@ class Distribution : public vector<double> {
 
       void check_negative() const;
 
+      void scal(double alpha);
+
    private:
 
       //!list of final walker states

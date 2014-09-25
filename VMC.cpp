@@ -46,7 +46,10 @@ void VMC::SetupWalkers(){
 
    walker[0].calc_EL(mps);
 
-   walker[1] = Walker(1);
+   global::mps.scal(1.0/ walker[0].gOverlap());
+
+   //recalculate
+   walker[0].calc_EL(mps);
    walker[1].calc_EL(mps);
 
    for(int i = 2;i < Nw;++i){
@@ -213,5 +216,21 @@ void VMC::dump(const char *filename){
       out << endl;
 
    }
+
+}
+
+/**
+ * increase the number of walkers by a factor
+ * @param factor multiply the number of waklers with factor
+ */
+void VMC::grow(int factor){
+
+   vector< Walker > backup_walker(walker);
+
+   for(int i = 1;i < factor;++i)
+      for(int j = 0;j < Nw;++j)
+         walker.push_back(backup_walker[j]);
+
+   Nw *= factor;
 
 }

@@ -36,6 +36,10 @@ class MPS : public vector< TArray<T,3> > {
 
       void load(const char *);
 
+      double dot(const MPS<double> &) const ;
+
+      double energy() const;
+
    private:
 
       //!dimension of the bonds

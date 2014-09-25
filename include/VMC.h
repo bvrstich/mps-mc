@@ -39,6 +39,8 @@ class VMC {
 
       void dump(const char *);
 
+      void grow(int);
+
    private:
       
       //!The total desired number of walkers

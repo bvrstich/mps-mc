@@ -34,6 +34,9 @@ int main(int argc,char *argv[]){
    char filename[200];
    sprintf(filename,"output/VMC/L=%d/D=%d.walk",L,D);
 
+   vmc.grow(10);
+   vmc.walk(1000);
+
    vmc.dump(filename);
 
 }
