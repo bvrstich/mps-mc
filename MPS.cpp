@@ -164,7 +164,6 @@ int MPS<T>::gD() const {
 /**
  * calculate the 1D Heisenberg model energy expectation value for this MPS
  */
-
 template<>
 double MPS<double>::energy() const{
 
