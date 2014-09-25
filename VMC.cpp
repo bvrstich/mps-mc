@@ -206,9 +206,12 @@ void VMC::dump(const char *filename){
    ofstream out(filename);
    out.precision(16);
 
-   for(unsigned int i = 0;i < walker.size();++i)
+   for(unsigned int i = 0;i < walker.size();++i){
+
       for(int j = 0;j < L;++j)
          out << walker[i][j] << " ";
-   out << endl;
+      out << endl;
+
+   }
 
 }
