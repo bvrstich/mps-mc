@@ -119,8 +119,8 @@ Walker &Distribution::gwalker(int index) {
 /**
  * construct and fill the distribution by calculating the matrix elements <0|1-dtau * H|i> for all i = 0,...,n
  * @param walker_i input walker, the list and distribution is constructed from this
- * @param dtau timestep
- * @param ET estimator for ground state energy
+ * @param tau time step value, needs to be small enough
+ * @param ET target energy, used to rescale the population, should be 'exact' energy
  */
 void Distribution::construct(const Walker &walker_i,double dtau,double ET){
 
@@ -131,15 +131,15 @@ void Distribution::construct(const Walker &walker_i,double dtau,double ET){
    //f == i first 
    list.push_back(walker_i);
 
-   //construct 'final' states
-   for(int site = 0;site < L - 1;++site){
+   //first horizontal 'final' states
+   for(int i = 0;i < L - 1;++i){
 
-      if(walker_i[site] != walker_i[site + 1]){
+      if(walker_i[i] != walker_i[i + 1]){
 
          Walker walker_f(walker_i);
 
-         walker_f[site] = !(walker_i[site]);
-         walker_f[site + 1] = !(walker_i[site + 1]);
+         walker_f[i] = !(walker_i[i]);
+         walker_f[i + 1] = !(walker_i[i + 1]);
 
          list.push_back(walker_f);
 
@@ -149,9 +149,26 @@ void Distribution::construct(const Walker &walker_i,double dtau,double ET){
 
    this->resize(list.size());
 
+   for(unsigned int i = 0;i < list.size();++i)
+      list[i].calc_overlap_jastrow();
+
    (*this)[0] = 1.0 - dtau * (walker_i.pot_en() - ET);
 
-   for(int i = 1;i < list.size();++i)
-      (*this)[i] = 0.5 * dtau * fabs( walker_i.gnn_over(i) / walker_i.gnn_over(0) );
+   for(unsigned int i = 1;i < list.size();++i)
+      (*this)[i] = 0.5 * dtau * ( list[i].gOverlap_jastrow() / list[0].gOverlap_jastrow() );
+
+}
+
+/** 
+ * get the local energy for the 'seed' walker, first the distribution has to be filled!
+ */
+double Distribution::energy() const {
+
+   double energy = list[0].pot_en();
+
+   for(unsigned int i = 1;i < list.size();++i)
+      energy -= 0.5 * list[i].gOverlap() / list[0].gOverlap();
+
+   return energy;
 
 }

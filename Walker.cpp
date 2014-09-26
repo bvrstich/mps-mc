@@ -338,3 +338,29 @@ void Walker::load(const char *filename){
    }
 
 }
+
+/**
+ * calculate the overlap of the Walke with the jastrow trial
+ */
+void Walker::calc_overlap_jastrow() {
+
+   overlap_jastrow = 1.0;
+
+   for(int i = 0;i < L - 1;++i) {
+
+      if( (*this)[i] == true )
+         if((*this)[i] == (*this)[i + 1])
+            overlap_jastrow *= global::f;
+
+   }
+
+}
+
+/**
+ * @return the overlap with the jastrow guiding wave function
+ */
+double Walker::gOverlap_jastrow() const {
+
+   return overlap_jastrow;
+
+}

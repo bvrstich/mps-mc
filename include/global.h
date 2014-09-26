@@ -28,6 +28,9 @@ namespace global {
    //!virtual dimension of the trial
    extern int DT;
 
+   //!jastrow correlation factor
+   extern double f;
+
    //!single layer mps for energy calculation
    extern vector< SL_MPS > U;
 
@@ -43,7 +46,7 @@ namespace global {
    //!trial wavefunction
    extern MPS<double> mps;
 
-   void init(int,int,int);
+   void init(int,int,int,double);
 
    template<typename T>
       T rgen();

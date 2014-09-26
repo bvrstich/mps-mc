@@ -9,6 +9,9 @@
 using std::complex;
 using std::vector;
 
+class Walker;
+class Distribution;
+
 class GFMC {
 
    public:
@@ -47,6 +50,9 @@ class GFMC {
 
       //!projected energy at current timestep
       double EP;
+
+      //!growth estimate of the energy
+      double ET;
 
       //!The walkers
       std::vector<Walker> walker;

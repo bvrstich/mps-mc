@@ -55,6 +55,10 @@ class Walker : public vector< bool > {
 
       int num_diff(const Walker &) const;
 
+      void calc_overlap_jastrow();
+
+      double gOverlap_jastrow() const;
+
   private:
 
       //!The walker weight
@@ -65,6 +69,9 @@ class Walker : public vector< bool > {
 
       //!overlap of nn configurations with trial
       vector<double> nn_over;
+
+      //!overlap with the jastrow wave function
+      double overlap_jastrow;
 
 };
 

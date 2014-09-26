@@ -20,6 +20,8 @@ namespace global{
 
    int d;
 
+   double f;
+
    MPS<double> mps;
 
    vector< SL_MPS > U;
@@ -35,8 +37,11 @@ namespace global{
     * @param DT_in virtual dimension of the trial
     * @param d_in physical dimension
     * @param L_in dimension of the lattice
+    * @param f_in input jastrow correlation factor
     */
-   void init(int DT_in,int d_in,int L_in){
+   void init(int DT_in,int d_in,int L_in,double f_in){
+
+      f = f_in;
 
       L = L_in;
 
@@ -56,7 +61,7 @@ namespace global{
       I.resize(omp_num_threads);
 
       backup_walker.resize(omp_num_threads);
-      
+     
       char filename[200];
       sprintf(filename,"/home/bright/bestanden/results/mps-mc/trial/Heis_1D/L=%d/Psi0/seba_D=%d.mps",L,DT);
 

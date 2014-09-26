@@ -42,6 +42,8 @@ class Distribution : public vector<double> {
 
       Walker &gwalker(int);
 
+      double energy() const;
+
    private:
 
       //!list of final walker states
