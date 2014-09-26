@@ -60,9 +60,9 @@ void GFMC::SetupWalkers(){
          input >> tmp;
          walker[i][j] = tmp;
 
-         walker[i].calc_EL(global::mps);
-
       }
+
+      walker[i].calc_EL(global::mps);
 
    }
 
