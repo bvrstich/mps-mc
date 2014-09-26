@@ -6,6 +6,10 @@
 #include <complex>
 #include <vector>
 
+#include <btas/common/blas_cxx_interface.h>
+#include <btas/common/TVector.h>
+#include <btas/DENSE/TArray.h>
+
 using std::complex;
 using std::vector;
 
@@ -53,10 +57,6 @@ class Walker : public vector< bool > {
 
       void load(const char *filename);
 
-      int gsign() const;
-
-      void sign_flip();
-
       int num_diff(const Walker &) const;
 
       double calc_overlap(const MPS< double > &);
@@ -65,9 +65,6 @@ class Walker : public vector< bool > {
 
       //!The walker weight
       double weight;
-
-      //!sign of the walker
-      int sign;
 
       //!local energy
       double EL;
