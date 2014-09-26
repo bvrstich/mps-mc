@@ -308,7 +308,7 @@ void Walker::calc_EL(const MPS< double > &mps){
    EL = this->pot_en();
 
    for(int i = 1;i < nn_over.size();++i)
-      EL -= 0.5 * nn_over[i] / nn_over[0];
+      EL -= 0.5 * fabs(nn_over[i] / nn_over[0]);
 
 }
 

@@ -158,7 +158,7 @@ void Distribution::construct(const Walker &walker_i,double dtau,double ET){
       if( (*this)[i] < 0.0 ){//look out for negative signs!
 
          (*this)[i] *= -1.0;
-         list[i].sign_flip();
+//         list[i].sign_flip();
 
       }
 

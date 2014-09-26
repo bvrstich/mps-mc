@@ -378,6 +378,20 @@ double MPS<double>::dot(const MPS<double> &mps_in) const{
 
 }
 
+/**
+ * scale the mps with a constant
+ * @param alpha the number/constant
+ */
+template<>
+void MPS<double>::scal(double alpha){
+
+   double tmp = pow(alpha,(double)1.0/(double)L);
+
+   for(unsigned int i = 0;i < this->size();++i)
+      Scal(tmp,mps[i]);
+
+}
+
 template MPS<double>::MPS();
 template MPS< complex<double> >::MPS();
 

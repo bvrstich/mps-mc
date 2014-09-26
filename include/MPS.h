@@ -5,6 +5,10 @@
 #include <fstream>
 #include <vector>
 
+#include <btas/common/blas_cxx_interface.h>
+#include <btas/common/TVector.h>
+#include <btas/DENSE/TArray.h>
+
 using std::ostream;
 using std::vector;
 
@@ -36,13 +40,13 @@ class MPS : public vector< TArray<T,3> > {
 
       int gD() const;
 
-      void scal(T );
-
       void load(const char *);
 
       double dot(const MPS<double> &) const;
 
       double energy() const;
+
+      void scal(double);
 
    private:
 

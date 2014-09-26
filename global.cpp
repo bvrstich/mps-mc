@@ -63,7 +63,7 @@ namespace global{
       mps.load(filename);
 
       Walker walker;
-
+      
       U[0] = SL_MPS(mps,walker);
 
       for(int thr = 1;thr < omp_num_threads;++thr)
@@ -71,6 +71,9 @@ namespace global{
 
       for(int thr = 0;thr < omp_num_threads;++thr)
          I[thr] = U[thr];
+
+      walker.calc_EL(mps);
+      global::mps.scal(1.0/ walker.gOverlap());
 
    }
 

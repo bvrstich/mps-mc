@@ -26,10 +26,10 @@ int main(int argc,char *argv[]){
    //initialize the dimensions of the problem, set the trial
    global::init(D,d,L);
 
-   double dtau = 0.001;
+   double dtau = 0.01;
    int Nw = 10000;
 
    GFMC gfmc(dtau,Nw);
-   gfmc.walk(1);
+   gfmc.walk(100000);
 
 }
