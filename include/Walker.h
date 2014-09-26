@@ -55,10 +55,6 @@ class Walker : public vector< bool > {
 
       int num_diff(const Walker &) const;
 
-      int gsign() const;
-
-      void sign_flip();
-
   private:
 
       //!The walker weight
@@ -69,9 +65,6 @@ class Walker : public vector< bool > {
 
       //!overlap of nn configurations with trial
       vector<double> nn_over;
-
-      //!sign of the walker
-      int sign;
 
 };
 

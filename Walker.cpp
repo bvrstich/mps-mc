@@ -23,7 +23,6 @@ using namespace global;
 Walker::Walker(int option) : std::vector< bool >( L ){
 
    weight = 1.0;
-   sign = 1;
 
    for(int site = 0;site < L;++site){
 
@@ -45,7 +44,6 @@ Walker::Walker(const Walker &walker) : std::vector< bool >(walker) {
    this->weight = walker.gWeight();
    this->nn_over = walker.gnn_over();
    this->EL = walker.gEL();
-   this->sign = walker.gsign();
 
 }
 
@@ -53,15 +51,6 @@ Walker::Walker(const Walker &walker) : std::vector< bool >(walker) {
  * destructor
  */
 Walker::~Walker(){ }
-
-/**
- * @return the sign of the walker
- */
-int Walker::gsign() const {
-
-   return sign;
-
-}
 
 /** 
  * @return the weight corresponding to the walker
@@ -87,15 +76,6 @@ void Walker::multWeight(double factor){
 void Walker::sWeight(double new_weight){
 
    weight = new_weight;
-
-}
-
-/**
- * flip the sign of the walker
- */
-void Walker::sign_flip(){
-
-   sign *= -1;
 
 }
 
