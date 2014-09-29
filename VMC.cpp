@@ -46,7 +46,7 @@ void VMC::SetupWalkers(){
 
    walker[0].calc_EL(mps);
 
-   global::mps.scal(1.0/ walker[0].gOverlap());
+   global::mps.scal(fabs(1.0/ walker[0].gOverlap()));
 
    //recalculate
    walker[0].calc_EL(mps);
