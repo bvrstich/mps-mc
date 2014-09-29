@@ -40,6 +40,9 @@ namespace global {
    //!number of omp threads
    extern int omp_num_threads;
 
+   //!cutoff factor for zero overlap
+   extern double cutoff;
+
    //!trial wavefunction
    extern MPS<double> mps;
 

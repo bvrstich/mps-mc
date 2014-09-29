@@ -27,9 +27,9 @@ int main(int argc,char *argv[]){
    global::init(D,d,L);
 
    double dtau = 0.01;
-   int Nw = 10000;
+   int Nw = 1;
 
    GFMC gfmc(dtau,Nw);
-   gfmc.walk(100000);
+   gfmc.walk(1);
 
 }

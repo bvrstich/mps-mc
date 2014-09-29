@@ -29,6 +29,8 @@ namespace global{
 
    int omp_num_threads;
 
+   double cutoff;
+
    Random RN;
 
    /**
@@ -44,6 +46,8 @@ namespace global{
 
       DT = DT_in;
 
+      cutoff = 1.0e-10;
+
 #ifdef _OPENMP
       omp_num_threads = omp_get_max_threads();
 #else
@@ -58,7 +62,7 @@ namespace global{
       backup_walker.resize(omp_num_threads);
       
       char filename[200];
-      sprintf(filename,"/home/bright/bestanden/results/mps-mc/trial/Heis_1D/L=%d/Psi0/seba_D=%d.mps",L,DT);
+      sprintf(filename,"/home/bright/bestanden/results/mps-mc/trial/Heis_1D/L=%d/Psi0/DT=%d.mps",L,DT);
 
       mps.load(filename);
 
