@@ -176,8 +176,6 @@ double GFMC::propagate(){
 
       double nrm = dist[myID].normalize();
 
-      cout << dist[myID] << endl;
-
       //draw new walker
       int pick = dist[myID].draw();
 

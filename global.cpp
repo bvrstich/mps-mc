@@ -77,7 +77,7 @@ namespace global{
          I[thr] = U[thr];
 
       walker.calc_EL(mps);
-      global::mps.scal(1.0/ walker.gOverlap());
+      global::mps.scal(fabs(1.0/ walker.gOverlap()));
 
    }
 
