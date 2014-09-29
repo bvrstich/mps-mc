@@ -20,6 +20,8 @@ namespace global{
 
    int d;
 
+   double cutoff;
+
    MPS<double> mps;
 
    vector< SL_MPS > U;
@@ -47,6 +49,8 @@ namespace global{
 #else
       omp_num_threads = 1;
 #endif
+
+      cutoff = 1.0e-10;
 
       mps.resize(L);
 

@@ -45,6 +45,9 @@ namespace global {
    template<typename T>
       T rgen();
 
+   //!test value which sets the minimal overlap
+   extern double cutoff;
+
 };
 
 #endif

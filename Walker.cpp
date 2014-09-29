@@ -232,7 +232,10 @@ void Walker::calc_EL(const MPS< double > &mps){
          blas::gemv(CblasRowMajor, CblasTrans, m, n, 1.0, U[myID][i].data(), n, LII.data(), 1, 0.0, tmp.data(), 1);
          value += blas::dot(n, tmp.data(), 1, RI[i-1].data(), 1);
 
-         nn_over.push_back(value);
+         if(fabs(value) > cutoff )
+            nn_over.push_back(value);
+         else
+            nn_over.push_back(cutoff);
 
       }
 
@@ -276,13 +279,21 @@ void Walker::calc_EL(const MPS< double > &mps){
       value = blas::dot(LUI.size(), LUI.data(), 1, I[myID][L-1].data(), 1);
       value += blas::dot(LII.size(), LII.data(), 1, U[myID][L-1].data(), 1);
 
-      nn_over.push_back(value);
+      if(fabs(value) > cutoff )
+         nn_over.push_back(value);
+      else
+         nn_over.push_back(cutoff);
 
    }
 
    //overlap
-   nn_over[0] = blas::dot(LUU.size(), LUU.data(), 1, U[myID][L-1].data(), 1);
-   nn_over[0] += blas::dot(LII.size(), LIU.data(), 1, I[myID][L-1].data(), 1);
+   value = blas::dot(LUU.size(), LUU.data(), 1, U[myID][L-1].data(), 1);
+   value += blas::dot(LII.size(), LIU.data(), 1, I[myID][L-1].data(), 1);
+
+   if( fabs(value) > cutoff )
+      nn_over[0] = value;
+   else
+      nn_over[0] = cutoff;
 
    //calculate the local energy
    EL = this->pot_en();
