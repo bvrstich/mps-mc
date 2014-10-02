@@ -31,5 +31,5 @@ int main(int argc,char *argv[]){
 
    GFMC gfmc(dtau,Nw);
    gfmc.walk(10000000);
-
+  
 }

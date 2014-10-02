@@ -46,7 +46,7 @@ namespace global{
 
       DT = DT_in;
 
-      cutoff = 1.0e-10;
+      cutoff = 0.0;
 
 #ifdef _OPENMP
       omp_num_threads = omp_get_max_threads();
@@ -60,9 +60,9 @@ namespace global{
       I.resize(omp_num_threads);
 
       backup_walker.resize(omp_num_threads);
-      
+     
       char filename[200];
-      sprintf(filename,"/home/bright/bestanden/results/mps-mc/trial/Heis_1D/L=%d/Psi0/DT=%d.mps",L,DT);
+      sprintf(filename,"/home/bright/bestanden/results/mps-mc/trial/Heis_1D/L=%d/Psi0/jastrow_seba.mps",L);
 
       mps.load(filename);
 
@@ -77,7 +77,7 @@ namespace global{
          I[thr] = U[thr];
 
       walker.calc_EL(mps);
-      global::mps.scal(fabs(1.0/ walker.gOverlap()));
+      global::mps.scal(1.0/ walker.gOverlap());
 
    }
 

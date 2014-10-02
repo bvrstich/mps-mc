@@ -30,6 +30,8 @@ class MPS : public vector< TArray<T,3> > {
 
       MPS(int D);
 
+      MPS(double f);
+
       MPS(const Walker &);
 
       //copy constructor

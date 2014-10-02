@@ -9,6 +9,9 @@
 using std::complex;
 using std::vector;
 
+class Walker;
+class Distribution;
+
 class GFMC {
 
    public:
@@ -37,6 +40,8 @@ class GFMC {
       //Setup the walkers
       void SetupWalkers();
 
+      void dump(const char *);
+
    private:
       
       //!The total desired number of walkers
@@ -47,6 +52,9 @@ class GFMC {
 
       //!projected energy at current timestep
       double EP;
+
+      //!target energy
+      double ET;
 
       //!The walkers
       std::vector<Walker> walker;

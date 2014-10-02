@@ -13,13 +13,11 @@ using std::ifstream;
 
 #include "include.h"
 
-using namespace global;
-
 /** 
  * empty constructor:
  */
 template<typename T>
-MPS<T>::MPS() : vector< TArray<T,3> >(L) { }
+MPS<T>::MPS() : vector< TArray<T,3> >(global::L) { }
 
 /** 
  * standard constructor: just takes in
@@ -27,17 +25,17 @@ MPS<T>::MPS() : vector< TArray<T,3> >(L) { }
  * allocates the tensors and fills them randomly
  */
 template<typename T>
-MPS<T>::MPS(int D_in) : vector< TArray<T,3> >(L) {
+MPS<T>::MPS(int D_in) : vector< TArray<T,3> >(global::L) {
 
    D = D_in;
 
-   vector<int> vdim(L + 1);
+   vector<int> vdim(global::L + 1);
 
    vdim[0] = 1;
 
-   for(int i = 1;i < L;++i){
+   for(int i = 1;i < global::L;++i){
 
-      int tmp = vdim[i - 1] * d;
+      int tmp = vdim[i - 1] * global::d;
 
       if(tmp < D)
          vdim[i] = tmp;
@@ -46,11 +44,11 @@ MPS<T>::MPS(int D_in) : vector< TArray<T,3> >(L) {
 
    }
 
-   vdim[L] = 1;
+   vdim[global::L] = 1;
 
-   for(int i = L - 1;i > 0;--i){
+   for(int i = global::L - 1;i > 0;--i){
 
-      int tmp = vdim[i + 1] * d;
+      int tmp = vdim[i + 1] * global::d;
 
       if(tmp < vdim[i])
          vdim[i] = tmp;
@@ -59,10 +57,81 @@ MPS<T>::MPS(int D_in) : vector< TArray<T,3> >(L) {
 
    for(int i = 0;i < this->size();++i){
 
-      (*this)[i].resize(d,vdim[i],vdim[i+1]);
-      (*this)[i].generate(rgen<T>);
+      (*this)[i].resize(global::d,vdim[i],vdim[i+1]);
+      (*this)[i].generate(global::rgen<T>);
 
    }
+
+}
+
+/** 
+ * construct the jastrow wave function as D=2 MPS
+ * @param f jastrow parameter
+ */
+template<typename T>
+MPS<T>::MPS(double f) : vector< TArray<T,3> >(global::L) {
+
+   D = 2;
+
+   vector<int> vdim(global::L + 1);
+
+   vdim[0] = 1;
+
+   for(int i = 1;i < global::L;++i){
+
+      int tmp = vdim[i - 1] * global::d;
+
+      if(tmp < D)
+         vdim[i] = tmp;
+      else 
+         vdim[i] = D;
+
+   }
+
+   vdim[global::L] = 1;
+
+   for(int i = global::L - 1;i > 0;--i){
+
+      int tmp = vdim[i + 1] * global::d;
+
+      if(tmp < vdim[i])
+         vdim[i] = tmp;
+
+   }
+
+   (*this)[0].resize(global::d,1,2);
+
+   (*this)[0](0,0,0) = 1.0;
+   (*this)[0](0,0,1) = 0.0;
+
+   (*this)[0](1,0,0) = 0.0;
+   (*this)[0](1,0,1) = 1.0;
+
+   for(int i = 1;i < global::L - 1;++i){
+
+      (*this)[i].resize(global::d,vdim[i],vdim[i+1]);
+
+      //up
+      (*this)[i](0,0,0) = f;
+      (*this)[i](0,0,1) = 0.0;
+      (*this)[i](0,1,0) = 1.0;
+      (*this)[i](0,1,1) = 0.0;
+
+      //down
+      (*this)[i](1,0,0) = 0.0;
+      (*this)[i](1,0,1) = 1.0;
+      (*this)[i](1,1,0) = 0.0;
+      (*this)[i](1,1,1) = f;
+
+   }
+
+   (*this)[global::L-1].resize(global::d,2,1);
+
+   (*this)[global::L-1](0,0,0) = f;
+   (*this)[global::L-1](0,1,0) = 1.0;
+
+   (*this)[global::L-1](1,0,0) = 1.0;
+   (*this)[global::L-1](1,1,0) = f;
 
 }
 
@@ -78,22 +147,22 @@ void MPS<T>::load(const char *filename){
 
    in >> a >> b >> c;
 
-   vector<int> vdim(L + 1);
+   vector<int> vdim(global::L + 1);
 
-   for(int i = 0;i <= L;++i)
+   for(int i = 0;i <= global::L;++i)
       in >> i >> vdim[i];
 
    int dim;
 
-   for(int i = 0;i < L;++i){
+   for(int i = 0;i < global::L;++i){
 
-      (*this)[i].resize(d,vdim[i],vdim[i+1]);
+      (*this)[i].resize(global::d,vdim[i],vdim[i+1]);
 
       int teller;
 
       in >> a >> b;
 
-      for(int s = 0;s < d;++s)
+      for(int s = 0;s < global::d;++s)
          for(int k = 0;k < vdim[i + 1];++k)
             for(int j = 0;j < vdim[i];++j){
 
@@ -120,19 +189,19 @@ MPS<T>::MPS(const MPS<T> &mps_copy) : vector< TArray<T,3> >(mps_copy) {
  * copy constructor
  */
 template<typename T>
-MPS<T>::MPS(const Walker &walker) : vector< TArray<T,3> >(L) {
+MPS<T>::MPS(const Walker &walker) : vector< TArray<T,3> >(global::L) {
 
    D = 1;
 
-   vector<int> vdim(L + 1);
+   vector<int> vdim(global::L + 1);
 
 
-   for(int i = 0;i <= L;++i)
+   for(int i = 0;i <= global::L;++i)
       vdim[i] = 1;
 
    for(int i = 0;i < this->size();++i){
 
-      (*this)[i].resize(d,vdim[i],vdim[i+1]);
+      (*this)[i].resize(global::d,vdim[i],vdim[i+1]);
       (*this)[i] = 0.0;
 
       if(walker[i])
@@ -173,22 +242,22 @@ double MPS<double>::energy() const{
    int myID = 0;
 #endif
 
-   DArray<2> Sz(d,d);
-   DArray<2> Sp(d,d);
-   DArray<2> Sm(d,d);
+   DArray<2> Sz(global::d,global::d);
+   DArray<2> Sp(global::d,global::d);
+   DArray<2> Sm(global::d,global::d);
 
    //Sz
    Sz(0,0) = -0.5;
    Sz(0,1) = 0.0;
    Sz(1,0) = 0.0;
    Sz(1,1) = 0.5;
-   
+
    //S+
    Sp(0,0) = 0.0;
    Sp(0,1) = 1.0;
    Sp(1,0) = 0.0;
    Sp(1,1) = 0.0;
-   
+
    //S-
    Sm(0,0) = 0.0;
    Sm(0,1) = 0.0;
@@ -199,26 +268,26 @@ double MPS<double>::energy() const{
 
    enum {j,k,l,m,n,o};
 
-   vector< DArray<4> > R(L-1);
+   vector< DArray<4> > R(global::L-1);
 
    DArray<5> I;
 
-   Contract(1.0,mps[L-1],shape(j,k,l),mps[L-1],shape(j,m,n),0.0,R[L-2],shape(k,l,m,n));
+   Contract(1.0,(*this)[global::L-1],shape(j,k,l),(*this)[global::L-1],shape(j,m,n),0.0,R[global::L-2],shape(k,l,m,n));
 
-   for(int i = L-2;i > 0;--i){
+   for(int i = global::L-2;i > 0;--i){
 
       I.clear();
-      Contract(1.0,mps[i],shape(j,k,l),R[i],shape(l,m,n,o),0.0,I,shape(j,k,m,n,o));
+      Contract(1.0,(*this)[i],shape(j,k,l),R[i],shape(l,m,n,o),0.0,I,shape(j,k,m,n,o));
 
       R[i-1].clear();
-      Contract(1.0,mps[i],shape(j,l,n),I,shape(j,k,m,n,o),0.0,R[i-1],shape(k,m,l,o));
+      Contract(1.0,(*this)[i],shape(j,l,n),I,shape(j,k,m,n,o),0.0,R[i-1],shape(k,m,l,o));
 
    }
 
    //first site
    DArray<4> LU;
 
-   Contract(1.0,mps[0],shape(j,k,l),mps[0],shape(j,m,n),0.0,LU,shape(k,l,m,n));
+   Contract(1.0,(*this)[0],shape(j,k,l),(*this)[0],shape(j,m,n),0.0,LU,shape(k,l,m,n));
 
    //operators
    DArray<4> Lz;
@@ -228,28 +297,28 @@ double MPS<double>::energy() const{
    DArray<3> tmp;
 
    //Sz
-   Contract(1.0,mps[0],shape(j,k,l),Sz,shape(j,m),0.0,tmp,shape(m,k,l));
-   Contract(1.0,tmp,shape(j,k,l),mps[0],shape(j,m,n),0.0,Lz,shape(k,l,m,n));
+   Contract(1.0,(*this)[0],shape(j,k,l),Sz,shape(j,m),0.0,tmp,shape(m,k,l));
+   Contract(1.0,tmp,shape(j,k,l),(*this)[0],shape(j,m,n),0.0,Lz,shape(k,l,m,n));
 
    //Sp
-   Contract(1.0,mps[0],shape(j,k,l),Sp,shape(j,m),0.0,tmp,shape(m,k,l));
-   Contract(1.0,tmp,shape(j,k,l),mps[0],shape(j,m,n),0.0,Lp,shape(k,l,m,n));
+   Contract(1.0,(*this)[0],shape(j,k,l),Sp,shape(j,m),0.0,tmp,shape(m,k,l));
+   Contract(1.0,tmp,shape(j,k,l),(*this)[0],shape(j,m,n),0.0,Lp,shape(k,l,m,n));
 
    //Sm
-   Contract(1.0,mps[0],shape(j,k,l),Sm,shape(j,m),0.0,tmp,shape(m,k,l));
-   Contract(1.0,tmp,shape(j,k,l),mps[0],shape(j,m,n),0.0,Lm,shape(k,l,m,n));
+   Contract(1.0,(*this)[0],shape(j,k,l),Sm,shape(j,m),0.0,tmp,shape(m,k,l));
+   Contract(1.0,tmp,shape(j,k,l),(*this)[0],shape(j,m,n),0.0,Lm,shape(k,l,m,n));
 
-   for(int i = 1;i < L - 1;++i){
+   for(int i = 1;i < global::L - 1;++i){
 
       //Sz
       tmp.clear();
-      Contract(1.0,mps[i],shape(j,k,l),Sz,shape(j,m),0.0,tmp,shape(m,k,l));
+      Contract(1.0,(*this)[i],shape(j,k,l),Sz,shape(j,m),0.0,tmp,shape(m,k,l));
 
       I.clear();
       Contract(1.0,Lz,shape(k,l,m,n),tmp,shape(j,l,o),0.0,I,shape(j,k,o,m,n));
 
       Lz.clear();
-      Contract(1.0,I,shape(j,k,o,m,n),mps[i],shape(j,n,l),0.0,Lz,shape(k,o,m,l));
+      Contract(1.0,I,shape(j,k,o,m,n),(*this)[i],shape(j,n,l),0.0,Lz,shape(k,o,m,l));
 
       ener += blas::dot(Lz.size(),Lz.data(),1,R[i].data(),1);
 
@@ -258,87 +327,87 @@ double MPS<double>::energy() const{
       Contract(1.0,LU,shape(k,l,m,n),tmp,shape(j,l,o),0.0,I,shape(j,k,o,m,n));
 
       Lz.clear();
-      Contract(1.0,I,shape(j,k,o,m,n),mps[i],shape(j,n,l),0.0,Lz,shape(k,o,m,l));
- 
+      Contract(1.0,I,shape(j,k,o,m,n),(*this)[i],shape(j,n,l),0.0,Lz,shape(k,o,m,l));
+
       //Sp
       tmp.clear();
-      Contract(1.0,mps[i],shape(j,k,l),Sm,shape(j,m),0.0,tmp,shape(m,k,l));
+      Contract(1.0,(*this)[i],shape(j,k,l),Sm,shape(j,m),0.0,tmp,shape(m,k,l));
 
       I.clear();
       Contract(1.0,Lp,shape(k,l,m,n),tmp,shape(j,l,o),0.0,I,shape(j,k,o,m,n));
 
       Lp.clear();
-      Contract(1.0,I,shape(j,k,o,m,n),mps[i],shape(j,n,l),0.0,Lp,shape(k,o,m,l));
+      Contract(1.0,I,shape(j,k,o,m,n),(*this)[i],shape(j,n,l),0.0,Lp,shape(k,o,m,l));
 
-      ener += 0.5 * blas::dot(Lp.size(),Lp.data(),1,R[i].data(),1);
+      ener -= 0.5 * blas::dot(Lp.size(),Lp.data(),1,R[i].data(),1);
 
       //Sm
       tmp.clear();
-      Contract(1.0,mps[i],shape(j,k,l),Sp,shape(j,m),0.0,tmp,shape(m,k,l));
+      Contract(1.0,(*this)[i],shape(j,k,l),Sp,shape(j,m),0.0,tmp,shape(m,k,l));
 
       I.clear();
       Contract(1.0,Lm,shape(k,l,m,n),tmp,shape(j,l,o),0.0,I,shape(j,k,o,m,n));
 
       Lm.clear();
-      Contract(1.0,I,shape(j,k,o,m,n),mps[i],shape(j,n,l),0.0,Lm,shape(k,o,m,l));
+      Contract(1.0,I,shape(j,k,o,m,n),(*this)[i],shape(j,n,l),0.0,Lm,shape(k,o,m,l));
 
-      ener += 0.5 * blas::dot(Lm.size(),Lm.data(),1,R[i].data(),1);
-      
+      ener -= 0.5 * blas::dot(Lm.size(),Lm.data(),1,R[i].data(),1);
+
       //create new Lm
       tmp.clear();
-      Contract(1.0,mps[i],shape(j,k,l),Sm,shape(j,m),0.0,tmp,shape(m,k,l));
+      Contract(1.0,(*this)[i],shape(j,k,l),Sm,shape(j,m),0.0,tmp,shape(m,k,l));
 
       I.clear();
       Contract(1.0,LU,shape(k,l,m,n),tmp,shape(j,l,o),0.0,I,shape(j,k,o,m,n));
 
       Lm.clear();
-      Contract(1.0,I,shape(j,k,o,m,n),mps[i],shape(j,n,l),0.0,Lm,shape(k,o,m,l));
+      Contract(1.0,I,shape(j,k,o,m,n),(*this)[i],shape(j,n,l),0.0,Lm,shape(k,o,m,l));
 
       //create new Lp
       tmp.clear();
-      Contract(1.0,mps[i],shape(j,k,l),Sp,shape(j,m),0.0,tmp,shape(m,k,l));
+      Contract(1.0,(*this)[i],shape(j,k,l),Sp,shape(j,m),0.0,tmp,shape(m,k,l));
 
       I.clear();
       Contract(1.0,LU,shape(k,l,m,n),tmp,shape(j,l,o),0.0,I,shape(j,k,o,m,n));
 
       Lp.clear();
-      Contract(1.0,I,shape(j,k,o,m,n),mps[i],shape(j,n,l),0.0,Lp,shape(k,o,m,l));
+      Contract(1.0,I,shape(j,k,o,m,n),(*this)[i],shape(j,n,l),0.0,Lp,shape(k,o,m,l));
 
       //finally create new LU
       I.clear();
-      Contract(1.0,LU,shape(k,l,m,n),mps[i],shape(j,l,o),0.0,I,shape(j,k,o,m,n));
+      Contract(1.0,LU,shape(k,l,m,n),(*this)[i],shape(j,l,o),0.0,I,shape(j,k,o,m,n));
 
       LU.clear();
-      Contract(1.0,I,shape(j,k,o,m,n),mps[i],shape(j,n,l),0.0,LU,shape(k,o,m,l));
+      Contract(1.0,I,shape(j,k,o,m,n),(*this)[i],shape(j,n,l),0.0,LU,shape(k,o,m,l));
 
    }
-   
+
    //Sz
    tmp.clear();
-   Contract(1.0,mps[L-1],shape(j,k,l),Sz,shape(j,m),0.0,tmp,shape(m,k,l));
+   Contract(1.0,(*this)[global::L-1],shape(j,k,l),Sz,shape(j,m),0.0,tmp,shape(m,k,l));
 
    LU.clear();
-   Contract(1.0,tmp,shape(j,k,l),mps[L-1],shape(j,m,n),0.0,LU,shape(k,l,m,n));
+   Contract(1.0,tmp,shape(j,k,l),(*this)[global::L-1],shape(j,m,n),0.0,LU,shape(k,l,m,n));
 
    ener += blas::dot(Lz.size(),Lz.data(),1,LU.data(),1);
 
    //Sp
    tmp.clear();
-   Contract(1.0,mps[L-1],shape(j,k,l),Sp,shape(j,m),0.0,tmp,shape(m,k,l));
+   Contract(1.0,(*this)[global::L-1],shape(j,k,l),Sp,shape(j,m),0.0,tmp,shape(m,k,l));
 
    LU.clear();
-   Contract(1.0,tmp,shape(j,k,l),mps[L-1],shape(j,m,n),0.0,LU,shape(k,l,m,n));
+   Contract(1.0,tmp,shape(j,k,l),(*this)[global::L-1],shape(j,m,n),0.0,LU,shape(k,l,m,n));
 
-   ener += 0.5 * blas::dot(Lm.size(),Lm.data(),1,LU.data(),1);
+   ener -= 0.5 * blas::dot(Lm.size(),Lm.data(),1,LU.data(),1);
 
    //Sm
    tmp.clear();
-   Contract(1.0,mps[L-1],shape(j,k,l),Sm,shape(j,m),0.0,tmp,shape(m,k,l));
+   Contract(1.0,(*this)[global::L-1],shape(j,k,l),Sm,shape(j,m),0.0,tmp,shape(m,k,l));
 
    LU.clear();
-   Contract(1.0,tmp,shape(j,k,l),mps[L-1],shape(j,m,n),0.0,LU,shape(k,l,m,n));
+   Contract(1.0,tmp,shape(j,k,l),(*this)[global::L-1],shape(j,m,n),0.0,LU,shape(k,l,m,n));
 
-   ener += 0.5 * blas::dot(Lp.size(),Lp.data(),1,LU.data(),1);
+   ener -= 0.5 * blas::dot(Lp.size(),Lp.data(),1,LU.data(),1);
 
    return ener;
 
@@ -362,15 +431,15 @@ double MPS<double>::dot(const MPS<double> &mps_in) const{
    DArray<4> E;
    DArray<5> I;
 
-   Contract(1.0,mps[L-1],shape(j,k,l),mps_in[L-1],shape(j,m,n),0.0,E,shape(k,l,m,n));
+   Contract(1.0,(*this)[global::L-1],shape(j,k,l),mps_in[global::L-1],shape(j,m,n),0.0,E,shape(k,l,m,n));
 
-   for(int i = L-1;i > 0;--i){
+   for(int i = global::L-1;i > 0;--i){
 
       I.clear();
-      Contract(1.0,mps[i-1],shape(j,k,l),E,shape(l,m,n,o),0.0,I,shape(j,k,m,n,o));
+      Contract(1.0,(*this)[i-1],shape(j,k,l),E,shape(l,m,n,o),0.0,I,shape(j,k,m,n,o));
 
       E.clear();
-      Contract(1.0,mps_in[i-1],shape(j,l,n),I,shape(j,k,m,n,o),0.0,E,shape(k,m,l,o));
+      Contract(1.0,(*this)[i-1],shape(j,l,n),I,shape(j,k,m,n,o),0.0,E,shape(k,m,l,o));
 
    }
 
@@ -385,10 +454,13 @@ double MPS<double>::dot(const MPS<double> &mps_in) const{
 template<>
 void MPS<double>::scal(double alpha){
 
-   double tmp = pow(alpha,(double)1.0/(double)L);
+   if(alpha < 0.0)
+      Scal(-1.0,(*this)[0]);
+
+   double tmp = pow(fabs(alpha),(double)1.0/(double)global::L);
 
    for(unsigned int i = 0;i < this->size();++i)
-      Scal(tmp,mps[i]);
+      Scal(tmp,(*this)[i]);
 
 }
 
@@ -397,6 +469,9 @@ template MPS< complex<double> >::MPS();
 
 template MPS<double>::MPS(int);
 template MPS< complex<double> >::MPS(int);
+
+template MPS<double>::MPS(double);
+template MPS< complex<double> >::MPS(double);
 
 template MPS<double>::MPS(const MPS<double> &);
 template MPS< complex<double> >::MPS(const MPS< complex<double> > &);

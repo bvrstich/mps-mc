@@ -46,23 +46,18 @@ void GFMC::SetupWalkers(){
 
    walker.resize(Nw);
 
-   char filename[200];
-   sprintf(filename,"output/VMC/L=%d/D=%d.walk",L,DT);
+   walker[0] = Walker(0);
+   walker[0].calc_EL(global::mps);
 
-   ifstream input(filename);
+   walker[1] = Walker(1);
+   walker[1].calc_EL(global::mps);
 
-   for(int i = 0;i < Nw;++i){
+   for(int i = 2;i < Nw;++i){
 
-      for(unsigned int j = 0;j < walker[i].size();++j){
-
-         bool tmp;
-
-         input >> tmp;
-         walker[i][j] = tmp;
-
-      }
-
-      walker[i].calc_EL(global::mps);
+      if(i % 2 == 0)
+         walker[i] = walker[0];
+      else
+         walker[i] = walker[1];
 
    }
 
@@ -93,7 +88,7 @@ void GFMC::walk(const int n_steps){
 
       double scaling = Nw / wsum;
 
-      double ET = 1.0/dtau * ( 1 - 1.0/scaling);
+      ET = 1.0/dtau * ( 1 - 1.0/scaling);
 
       //calculate the energy
       sEP();
@@ -133,6 +128,16 @@ void GFMC::walk(const int n_steps){
 
       }
 
+      if(step % 1000 == 0){
+
+         char walker_file[200];
+         sprintf(walker_file,"output/GFMC/L=%d/D=%d.walk",global::L,global::DT);
+
+         dump(walker_file);
+
+      }
+
+
 #ifdef _DEBUG
       cout << endl;
       cout << "Minimal Overlap:\t" << min_ov << endl;
@@ -153,11 +158,8 @@ void GFMC::walk(const int n_steps){
 double GFMC::propagate(){
 
    double sum = 0.0;
-   int num_rej = 0;
 
-   double width = sqrt(2.0/dtau);
-
-#pragma omp parallel for reduction(+: sum,num_rej)
+#pragma omp parallel for reduction(+: sum)
    for(unsigned int i = 0;i < walker.size();i++){
 
 #ifdef _OPENMP
@@ -166,14 +168,8 @@ double GFMC::propagate(){
       int myID = 0;
 #endif
 
-      //backup the walker for stability
-      backup_walker[myID] = walker[i];
-
-      double prev_EL = walker[i].gEL();
-
       //construct distribution
       dist[myID].construct(walker[i],dtau,0.0);
-
       double nrm = dist[myID].normalize();
 
       //draw new walker
@@ -187,26 +183,9 @@ double GFMC::propagate(){
       //calculate new properties
       walker[i].calc_EL(mps);
 
-      double EL = walker[i].gEL();
-
-      if( (EL < prev_EL - width) || (EL > prev_EL + width) ){//very rare event, will cause numerical unstability
-
-         num_rej++;
-
-         //copy the state back!
-         walker[i] = backup_walker[myID];
-
-      }
-
       sum += walker[i].gWeight();
 
    }
-
-#ifdef _DEBUG
-      cout << endl;
-      cout << "Number rejected:\t" << num_rej << endl;
-      cout << endl;
-#endif
 
    return sum;
 
@@ -327,7 +306,25 @@ void GFMC::write(const int step){
 
    ofstream output(filename,ios::app);
    output.precision(16);
-   output << step << "\t\t" << walker.size() << "\t" << EP << endl;
+   output << step << "\t\t" << walker.size() << "\t" << EP << "\t" << ET << endl;
    output.close();
+
+}
+
+/**
+ * dump the walkers to a single file
+ */
+void GFMC::dump(const char *filename){
+
+   ofstream out(filename);
+   out.precision(16);
+
+   for(unsigned int i = 0;i < walker.size();++i){
+
+      for(int site = 0;site < L;++site)
+         out << walker[i][site] << " ";
+      out << endl;
+
+   }
 
 }

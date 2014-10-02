@@ -270,7 +270,7 @@ void Walker::calc_EL(const MPS< double > &mps){
 
       LIU.resize(n);
       blas::copy(n, tmp.data(), 1, LIU.data(), 1);
-
+ 
    }
 
    //final contribution to the energy
